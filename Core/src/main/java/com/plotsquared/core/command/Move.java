@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -33,7 +26,6 @@ import com.plotsquared.core.player.PlotPlayer;
 import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.plot.world.PlotAreaManager;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.task.RunnableVal2;
 import com.plotsquared.core.util.task.RunnableVal3;
 import net.kyori.adventure.text.minimessage.Template;
@@ -67,8 +59,7 @@ public class Move extends SubCommand {
             player.sendMessage(TranslatableCaption.of("errors.not_in_plot"));
             return CompletableFuture.completedFuture(false);
         }
-        if (!plot1.isOwner(player.getUUID()) && !Permissions
-                .hasPermission(player, Permission.PERMISSION_ADMIN)) {
+        if (!plot1.isOwner(player.getUUID()) && !player.hasPermission(Permission.PERMISSION_ADMIN)) {
             player.sendMessage(TranslatableCaption.of("permission.no_plot_perms"));
             return CompletableFuture.completedFuture(false);
         }
@@ -95,8 +86,7 @@ public class Move extends SubCommand {
             player.sendMessage(TranslatableCaption.of("invalid.origin_cant_be_target"));
             return CompletableFuture.completedFuture(false);
         }
-        if (!plot1.getArea().isCompatible(plot2.getArea()) && (!override || !Permissions
-                .hasPermission(player, Permission.PERMISSION_ADMIN))) {
+        if (!plot1.getArea().isCompatible(plot2.getArea()) && (!override || !player.hasPermission(Permission.PERMISSION_ADMIN))) {
             player.sendMessage(TranslatableCaption.of("errors.plotworld_incompatible"));
             return CompletableFuture.completedFuture(false);
         }
@@ -105,13 +95,17 @@ public class Move extends SubCommand {
             return CompletableFuture.completedFuture(false);
         }
 
+        // Set strings here as the plot objects are mutable (the PlotID changes after being moved).
+        String p1 = plot1.toString();
+        String p2 = plot2.toString();
+
         return plot1.getPlotModificationManager().move(plot2, player, () -> {
         }, false).thenApply(result -> {
             if (result) {
                 player.sendMessage(
                         TranslatableCaption.of("move.move_success"),
-                        Template.of("origin", plot1.toString()),
-                        Template.of("target", plot2.toString())
+                        Template.of("origin", p1),
+                        Template.of("target", p2)
                 );
                 return true;
             } else {

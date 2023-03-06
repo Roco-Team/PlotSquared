@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -46,7 +39,6 @@ import com.plotsquared.core.setup.PlotAreaBuilder;
 import com.plotsquared.core.setup.SettingsNodesWrapper;
 import com.plotsquared.core.util.FileBytes;
 import com.plotsquared.core.util.FileUtils;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.SetupUtils;
 import com.plotsquared.core.util.TabCompletions;
 import com.plotsquared.core.util.WorldUtil;
@@ -286,10 +278,10 @@ public class Template extends SubCommand {
     public Collection<Command> tab(final PlotPlayer<?> player, final String[] args, final boolean space) {
         if (args.length == 1) {
             final List<String> completions = new LinkedList<>();
-            if (Permissions.hasPermission(player, Permission.PERMISSION_TEMPLATE_EXPORT)) {
+            if (player.hasPermission(Permission.PERMISSION_TEMPLATE_EXPORT)) {
                 completions.add("export");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_TEMPLATE_IMPORT)) {
+            if (player.hasPermission(Permission.PERMISSION_TEMPLATE_IMPORT)) {
                 completions.add("import");
             }
             final List<Command> commands = completions.stream().filter(completion -> completion
@@ -304,7 +296,7 @@ public class Template extends SubCommand {
                             CommandCategory.ADMINISTRATION
                     ) {
                     }).collect(Collectors.toCollection(LinkedList::new));
-            if (Permissions.hasPermission(player, Permission.PERMISSION_TEMPLATE) && args[0].length() > 0) {
+            if (player.hasPermission(Permission.PERMISSION_TEMPLATE) && args[0].length() > 0) {
                 commands.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
             }
             return commands;

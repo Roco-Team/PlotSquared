@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -37,7 +30,6 @@ import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.plot.schematic.Schematic;
 import com.plotsquared.core.plot.world.PlotAreaManager;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.SchematicHandler;
 import com.plotsquared.core.util.StringMan;
 import com.plotsquared.core.util.TabCompletions;
@@ -87,7 +79,7 @@ public class SchematicCmd extends SubCommand {
         String arg = args[0].toLowerCase();
         switch (arg) {
             case "paste" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC_PASTE)) {
+                if (!player.hasPermission(Permission.PERMISSION_SCHEMATIC_PASTE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_SCHEMATIC_PASTE))
@@ -111,8 +103,7 @@ public class SchematicCmd extends SubCommand {
                     player.sendMessage(TranslatableCaption.of("info.plot_unowned"));
                     return false;
                 }
-                if (!plot.isOwner(player.getUUID()) && !Permissions
-                        .hasPermission(player, "plots.admin.command.schematic.paste")) {
+                if (!plot.isOwner(player.getUUID()) && !player.hasPermission("plots.admin.command.schematic.paste")) {
                     player.sendMessage(TranslatableCaption.of("permission.no_plot_perms"));
                     return false;
                 }
@@ -166,7 +157,7 @@ public class SchematicCmd extends SubCommand {
                             0,
                             false,
                             player,
-                            new RunnableVal<Boolean>() {
+                            new RunnableVal<>() {
                                 @Override
                                 public void run(Boolean value) {
                                     SchematicCmd.this.running = false;
@@ -181,8 +172,6 @@ public class SchematicCmd extends SubCommand {
                 });
             }
             case "saveall", "exportall" -> {
-                Location loc = player.getLocation();
-                final Plot plot = loc.getPlotAbs();
                 if (!(player instanceof ConsolePlayer)) {
                     player.sendMessage(TranslatableCaption.of("console.not_console"));
                     return false;
@@ -227,7 +216,7 @@ public class SchematicCmd extends SubCommand {
                 }
             }
             case "export", "save" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC_SAVE)) {
+                if (!player.hasPermission(Permission.PERMISSION_SCHEMATIC_SAVE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_SCHEMATIC_SAVE))
@@ -252,8 +241,7 @@ public class SchematicCmd extends SubCommand {
                     player.sendMessage(TranslatableCaption.of("schematics.schematic_too_large"));
                     return false;
                 }
-                if (!plot.isOwner(player.getUUID()) && !Permissions
-                        .hasPermission(player, "plots.admin.command.schematic.save")) {
+                if (!plot.isOwner(player.getUUID()) && !player.hasPermission("plots.admin.command.schematic.save")) {
                     player.sendMessage(TranslatableCaption.of("permission.no_plot_perms"));
                     return false;
                 }
@@ -270,7 +258,7 @@ public class SchematicCmd extends SubCommand {
                 }
             }
             case "list" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC_LIST)) {
+                if (!player.hasPermission(Permission.PERMISSION_SCHEMATIC_LIST)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_SCHEMATIC_LIST))
@@ -295,13 +283,13 @@ public class SchematicCmd extends SubCommand {
     public Collection<Command> tab(final PlotPlayer<?> player, final String[] args, final boolean space) {
         if (args.length == 1) {
             final List<String> completions = new LinkedList<>();
-            if (Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC_SAVE)) {
+            if (player.hasPermission(Permission.PERMISSION_SCHEMATIC_SAVE)) {
                 completions.add("save");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC_LIST)) {
+            if (player.hasPermission(Permission.PERMISSION_SCHEMATIC_LIST)) {
                 completions.add("list");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC_PASTE)) {
+            if (player.hasPermission(Permission.PERMISSION_SCHEMATIC_PASTE)) {
                 completions.add("paste");
             }
             final List<Command> commands = completions.stream().filter(completion -> completion
@@ -316,7 +304,7 @@ public class SchematicCmd extends SubCommand {
                             CommandCategory.ADMINISTRATION
                     ) {
                     }).collect(Collectors.toCollection(LinkedList::new));
-            if (Permissions.hasPermission(player, Permission.PERMISSION_SCHEMATIC) && args[0].length() > 0) {
+            if (player.hasPermission(Permission.PERMISSION_SCHEMATIC) && args[0].length() > 0) {
                 commands.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
             }
             return commands;

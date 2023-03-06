@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.listener;
 
@@ -43,7 +36,6 @@ import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.plot.PlotTitle;
 import com.plotsquared.core.plot.PlotWeather;
 import com.plotsquared.core.plot.comment.CommentManager;
-import com.plotsquared.core.plot.expiration.ExpireManager;
 import com.plotsquared.core.plot.flag.GlobalFlagContainer;
 import com.plotsquared.core.plot.flag.PlotFlag;
 import com.plotsquared.core.plot.flag.implementations.DenyExitFlag;
@@ -58,12 +50,12 @@ import com.plotsquared.core.plot.flag.implementations.MusicFlag;
 import com.plotsquared.core.plot.flag.implementations.NotifyEnterFlag;
 import com.plotsquared.core.plot.flag.implementations.NotifyLeaveFlag;
 import com.plotsquared.core.plot.flag.implementations.PlotTitleFlag;
+import com.plotsquared.core.plot.flag.implementations.ServerPlotFlag;
 import com.plotsquared.core.plot.flag.implementations.TimeFlag;
 import com.plotsquared.core.plot.flag.implementations.TitlesFlag;
 import com.plotsquared.core.plot.flag.implementations.WeatherFlag;
 import com.plotsquared.core.plot.flag.types.TimedFlag;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.PlayerManager;
 import com.plotsquared.core.util.task.TaskManager;
 import com.plotsquared.core.util.task.TaskTime;
@@ -73,10 +65,13 @@ import com.sk89q.worldedit.world.item.ItemType;
 import com.sk89q.worldedit.world.item.ItemTypes;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.Template;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -88,6 +83,7 @@ public class PlotListener {
 
     private final HashMap<UUID, Interval> feedRunnable = new HashMap<>();
     private final HashMap<UUID, Interval> healRunnable = new HashMap<>();
+    private final Map<UUID, List<StatusEffect>> playerEffects = new HashMap<>();
 
     private final EventDispatcher eventDispatcher;
 
@@ -137,12 +133,22 @@ public class PlotListener {
                     }
                 }
             }
+
+            if (!playerEffects.isEmpty()) {
+                long currentTime = System.currentTimeMillis();
+                for (Iterator<Map.Entry<UUID, List<StatusEffect>>> iterator =
+                     playerEffects.entrySet().iterator(); iterator.hasNext(); ) {
+                    Map.Entry<UUID, List<StatusEffect>> entry = iterator.next();
+                    List<StatusEffect> effects = entry.getValue();
+                    effects.removeIf(effect -> currentTime > effect.expiresAt);
+                    if (effects.isEmpty()) iterator.remove();
+                }
+            }
         }, TaskTime.seconds(1L));
     }
 
     public boolean plotEntry(final PlotPlayer<?> player, final Plot plot) {
-        if (plot.isDenied(player.getUUID()) && !Permissions
-                .hasPermission(player, "plots.admin.entry.denied")) {
+        if (plot.isDenied(player.getUUID()) && !player.hasPermission("plots.admin.entry.denied")) {
             player.sendMessage(
                     TranslatableCaption.of("deny.no_enter"),
                     Template.of("plot", plot.toString())
@@ -154,8 +160,8 @@ public class PlotListener {
             if ((last != null) && !last.getId().equals(plot.getId())) {
                 plotExit(player, last);
             }
-            if (ExpireManager.IMP != null) {
-                ExpireManager.IMP.handleEntry(player, plot);
+            if (PlotSquared.platform().expireManager() != null) {
+                PlotSquared.platform().expireManager().handleEntry(player, plot);
             }
             lastPlot.set(plot);
         }
@@ -173,44 +179,26 @@ public class PlotListener {
             String greeting = plot.getFlag(GreetingFlag.class);
             if (!greeting.isEmpty()) {
                 if (!Settings.Chat.NOTIFICATION_AS_ACTIONBAR) {
-                    player.sendMessage(
-                            TranslatableCaption.of("flags.greeting_flag_format"),
-                            Template.of("world", plot.getWorldName()),
-                            Template.of("plot_id", plot.getId().toString()),
-                            Template.of("alias", plot.getAlias()),
-                            Template.of("greeting", greeting)
-                    );
+                    plot.format(StaticCaption.of(greeting), player, false).thenAcceptAsync(player::sendMessage);
                 } else {
-                    player.sendActionBar(
-                            TranslatableCaption.of("flags.greeting_flag_format"),
-                            Template.of("world", plot.getWorldName()),
-                            Template.of("plot_id", plot.getId().toString()),
-                            Template.of("alias", plot.getAlias()),
-                            Template.of("greeting", greeting)
-                    );
+                    plot.format(StaticCaption.of(greeting), player, false).thenAcceptAsync(player::sendActionBar);
                 }
             }
 
             if (plot.getFlag(NotifyEnterFlag.class)) {
-                if (!Permissions.hasPermission(player, "plots.flag.notify-enter.bypass")) {
+                if (!player.hasPermission("plots.flag.notify-enter.bypass")) {
                     for (UUID uuid : plot.getOwners()) {
                         final PlotPlayer<?> owner = PlotSquared.platform().playerManager().getPlayerIfExists(uuid);
                         if (owner != null && !owner.getUUID().equals(player.getUUID()) && owner.canSee(player)) {
                             Caption caption = TranslatableCaption.of("notification.notify_enter");
-                            Template playerTemplate = Template.of("player", player.getName());
-                            Template plotTemplate = Template.of("plot", plot.getId().toString());
-                            if (!Settings.Chat.NOTIFICATION_AS_ACTIONBAR) {
-                                owner.sendMessage(caption, playerTemplate, plotTemplate);
-                            } else {
-                                owner.sendActionBar(caption, playerTemplate, plotTemplate);
-                            }
+                            notifyPlotOwner(player, plot, owner, caption);
                         }
                     }
                 }
             }
 
             final FlyFlag.FlyStatus flyStatus = plot.getFlag(FlyFlag.class);
-            if (!Permissions.hasPermission(player, Permission.PERMISSION_ADMIN_FLIGHT)) {
+            if (!player.hasPermission(Permission.PERMISSION_ADMIN_FLIGHT)) {
                 if (flyStatus != FlyFlag.FlyStatus.DEFAULT) {
                     boolean flight = player.getFlight();
                     GameMode gamemode = player.getGameMode();
@@ -226,7 +214,7 @@ public class PlotListener {
             final GameMode gameMode = plot.getFlag(GamemodeFlag.class);
             if (!gameMode.equals(GamemodeFlag.DEFAULT)) {
                 if (player.getGameMode() != gameMode) {
-                    if (!Permissions.hasPermission(player, "plots.gamemode.bypass")) {
+                    if (!player.hasPermission("plots.gamemode.bypass")) {
                         player.setGameMode(gameMode);
                     } else {
                         player.sendMessage(
@@ -241,7 +229,7 @@ public class PlotListener {
             final GameMode guestGameMode = plot.getFlag(GuestGamemodeFlag.class);
             if (!guestGameMode.equals(GamemodeFlag.DEFAULT)) {
                 if (player.getGameMode() != guestGameMode && !plot.isAdded(player.getUUID())) {
-                    if (!Permissions.hasPermission(player, "plots.gamemode.bypass")) {
+                    if (!player.hasPermission("plots.gamemode.bypass")) {
                         player.setGameMode(guestGameMode);
                     } else {
                         player.sendMessage(
@@ -280,7 +268,7 @@ public class PlotListener {
                         Location location = player.getLocation();
                         Location lastLocation = musicMeta.get().orElse(null);
                         if (lastLocation != null) {
-                            player.playMusic(lastLocation, musicFlag);
+                            plot.getCenter(center -> player.playMusic(center.add(0, Short.MAX_VALUE, 0), musicFlag));
                             if (musicFlag == ItemTypes.AIR) {
                                 musicMeta.remove();
                             }
@@ -288,7 +276,7 @@ public class PlotListener {
                         if (musicFlag != ItemTypes.AIR) {
                             try {
                                 musicMeta.set(location);
-                                player.playMusic(location, musicFlag);
+                                plot.getCenter(center -> player.playMusic(center.add(0, Short.MAX_VALUE, 0), musicFlag));
                             } catch (Exception ignored) {
                             }
                         }
@@ -317,51 +305,52 @@ public class PlotListener {
                     subtitle = "";
                     fromFlag = false;
                 }
-                // It's not actually possible for these to be null, but IntelliJ is dumb
-                TaskManager.runTaskLaterAsync(() -> {
-                    Plot lastPlot;
-                    try (final MetaDataAccess<Plot> lastPlotAccess =
-                                 player.accessTemporaryMetaData(PlayerMetaDataKeys.TEMPORARY_LAST_PLOT)) {
-                        lastPlot = lastPlotAccess.get().orElse(null);
-                    }
-                    if ((lastPlot != null) && plot.getId().equals(lastPlot.getId()) && plot.hasOwner()) {
-                        final UUID plotOwner = plot.getOwnerAbs();
-                        String owner = PlayerManager.getName(plotOwner, false);
-                        Caption header = fromFlag ? StaticCaption.of(title) : TranslatableCaption.of("titles" +
-                                ".title_entered_plot");
-                        Caption subHeader = fromFlag ? StaticCaption.of(subtitle) : TranslatableCaption.of("titles" +
-                                ".title_entered_plot_sub");
-                        Template plotTemplate = Template.of("plot", lastPlot.getId().toString());
-                        Template worldTemplate = Template.of("world", player.getLocation().getWorldName());
-                        Template ownerTemplate = Template.of("owner", owner);
-                        Template aliasTemplate = Template.of("alias", plot.getAlias());
-
-                        final Consumer<String> userConsumer = user -> {
-                            if (Settings.Titles.TITLES_AS_ACTIONBAR) {
-                                player.sendActionBar(header, aliasTemplate, plotTemplate, worldTemplate, ownerTemplate);
-                            } else {
-                                player.sendTitle(header, subHeader, aliasTemplate, plotTemplate, worldTemplate, ownerTemplate);
-                            }
-                        };
-
-                        UUID uuid = plot.getOwner();
-                        if (uuid == null) {
-                            userConsumer.accept("Unknown");
-                        } else if (uuid.equals(DBFunc.SERVER)) {
-                            userConsumer.accept(MINI_MESSAGE.stripTokens(TranslatableCaption
-                                    .of("info.server")
-                                    .getComponent(player)));
-                        } else {
-                            PlotSquared.get().getImpromptuUUIDPipeline().getSingle(plot.getOwner(), (user, throwable) -> {
-                                if (throwable != null) {
-                                    userConsumer.accept("Unknown");
-                                } else {
-                                    userConsumer.accept(user);
-                                }
-                            });
+                if (fromFlag || !plot.getFlag(ServerPlotFlag.class) || Settings.Titles.DISPLAY_DEFAULT_ON_SERVER_PLOT) {
+                    TaskManager.runTaskLaterAsync(() -> {
+                        Plot lastPlot;
+                        try (final MetaDataAccess<Plot> lastPlotAccess =
+                                     player.accessTemporaryMetaData(PlayerMetaDataKeys.TEMPORARY_LAST_PLOT)) {
+                            lastPlot = lastPlotAccess.get().orElse(null);
                         }
-                    }
-                }, TaskTime.seconds(1L));
+                        if ((lastPlot != null) && plot.getId().equals(lastPlot.getId()) && plot.hasOwner()) {
+                            final UUID plotOwner = plot.getOwnerAbs();
+                            String owner = PlayerManager.resolveName(plotOwner, true).getComponent(player);
+                            Caption header = fromFlag ? StaticCaption.of(title) : TranslatableCaption.of("titles" +
+                                    ".title_entered_plot");
+                            Caption subHeader = fromFlag ? StaticCaption.of(subtitle) : TranslatableCaption.of("titles" +
+                                    ".title_entered_plot_sub");
+                            Template plotTemplate = Template.of("plot", lastPlot.getId().toString());
+                            Template worldTemplate = Template.of("world", player.getLocation().getWorldName());
+                            Template ownerTemplate = Template.of("owner", owner);
+                            Template aliasTemplate = Template.of("alias", plot.getAlias());
+
+                            final Consumer<String> userConsumer = user -> {
+                                if (Settings.Titles.TITLES_AS_ACTIONBAR) {
+                                    player.sendActionBar(header, aliasTemplate, plotTemplate, worldTemplate, ownerTemplate);
+                                } else {
+                                    player.sendTitle(header, subHeader, aliasTemplate, plotTemplate, worldTemplate, ownerTemplate);
+                                }
+                            };
+
+                            UUID uuid = plot.getOwner();
+                            if (uuid == null) {
+                                userConsumer.accept("Unknown");
+                            } else if (uuid.equals(DBFunc.SERVER)) {
+                                userConsumer.accept(MINI_MESSAGE.stripTokens(TranslatableCaption
+                                        .of("info.server")
+                                        .getComponent(player)));
+                            } else {
+                                PlotSquared.get().getImpromptuUUIDPipeline().getSingle(plot.getOwner(), (user, throwable) -> {
+                                    if (throwable != null) {
+                                        userConsumer.accept("Unknown");
+                                    } else {
+                                        userConsumer.accept(user);
+                                    }
+                                });
+                            }
+                        }
+                    }, TaskTime.seconds(1L));
+                }
             }
 
             TimedFlag.Timed<Integer> feed = plot.getFlag(FeedFlag.class);
@@ -383,6 +372,17 @@ public class PlotListener {
         try (final MetaDataAccess<Plot> lastPlot = player.accessTemporaryMetaData(PlayerMetaDataKeys.TEMPORARY_LAST_PLOT)) {
             final Plot previous = lastPlot.remove();
             this.eventDispatcher.callLeave(player, plot);
+
+            List<StatusEffect> effects = playerEffects.remove(player.getUUID());
+            if (effects != null) {
+                long currentTime = System.currentTimeMillis();
+                effects.forEach(effect -> {
+                    if (currentTime <= effect.expiresAt) {
+                        player.removeEffect(effect.name);
+                    }
+                });
+            }
+
             if (plot.hasOwner()) {
                 PlotArea pw = plot.getArea();
                 if (pw == null) {
@@ -390,8 +390,7 @@ public class PlotListener {
                 }
                 try (final MetaDataAccess<Boolean> kickAccess =
                              player.accessTemporaryMetaData(PlayerMetaDataKeys.TEMPORARY_KICK)) {
-                    if (plot.getFlag(DenyExitFlag.class) && !Permissions
-                            .hasPermission(player, Permission.PERMISSION_ADMIN_EXIT_DENIED) &&
+                    if (plot.getFlag(DenyExitFlag.class) && !player.hasPermission(Permission.PERMISSION_ADMIN_EXIT_DENIED) &&
                             !kickAccess.get().orElse(false)) {
                         if (previous != null) {
                             lastPlot.set(previous);
@@ -402,7 +401,7 @@ public class PlotListener {
                 if (!plot.getFlag(GamemodeFlag.class).equals(GamemodeFlag.DEFAULT) || !plot
                         .getFlag(GuestGamemodeFlag.class).equals(GamemodeFlag.DEFAULT)) {
                     if (player.getGameMode() != pw.getGameMode()) {
-                        if (!Permissions.hasPermission(player, "plots.gamemode.bypass")) {
+                        if (!player.hasPermission("plots.gamemode.bypass")) {
                             player.setGameMode(pw.getGameMode());
                         } else {
                             player.sendMessage(
@@ -417,37 +416,19 @@ public class PlotListener {
                 String farewell = plot.getFlag(FarewellFlag.class);
                 if (!farewell.isEmpty()) {
                     if (!Settings.Chat.NOTIFICATION_AS_ACTIONBAR) {
-                        player.sendMessage(
-                                TranslatableCaption.of("flags.farewell_flag_format"),
-                                Template.of("world", plot.getWorldName()),
-                                Template.of("plot_id", plot.getId().toString()),
-                                Template.of("alias", plot.getAlias()),
-                                Template.of("farewell", farewell)
-                        );
+                        plot.format(StaticCaption.of(farewell), player, false).thenAcceptAsync(player::sendMessage);
                     } else {
-                        player.sendActionBar(
-                                TranslatableCaption.of("flags.farewell_flag_format"),
-                                Template.of("world", plot.getWorldName()),
-                                Template.of("plot_id", plot.getId().toString()),
-                                Template.of("alias", plot.getAlias()),
-                                Template.of("farewell", farewell)
-                        );
+                        plot.format(StaticCaption.of(farewell), player, false).thenAcceptAsync(player::sendActionBar);
                     }
                 }
 
                 if (plot.getFlag(NotifyLeaveFlag.class)) {
-                    if (!Permissions.hasPermission(player, "plots.flag.notify-leave.bypass")) {
+                    if (!player.hasPermission("plots.flag.notify-leave.bypass")) {
                         for (UUID uuid : plot.getOwners()) {
                             final PlotPlayer<?> owner = PlotSquared.platform().playerManager().getPlayerIfExists(uuid);
                             if ((owner != null) && !owner.getUUID().equals(player.getUUID()) && owner.canSee(player)) {
                                 Caption caption = TranslatableCaption.of("notification.notify_leave");
-                                Template playerTemplate = Template.of("player", player.getName());
-                                Template plotTemplate = Template.of("plot", plot.getId().toString());
-                                if (!Settings.Chat.NOTIFICATION_AS_ACTIONBAR) {
-                                    owner.sendMessage(caption, playerTemplate, plotTemplate);
-                                } else {
-                                    owner.sendActionBar(caption, playerTemplate, plotTemplate);
-                                }
+                                notifyPlotOwner(player, plot, owner, caption);
                             }
                         }
                     }
@@ -495,9 +476,37 @@ public class PlotListener {
         return true;
     }
 
+    private void notifyPlotOwner(final PlotPlayer<?> player, final Plot plot, final PlotPlayer<?> owner, final Caption caption) {
+        Template playerTemplate = Template.of("player", player.getName());
+        Template plotTemplate = Template.of("plot", plot.getId().toString());
+        Template areaTemplate = Template.of("area", plot.getArea().toString());
+        if (!Settings.Chat.NOTIFICATION_AS_ACTIONBAR) {
+            owner.sendMessage(caption, playerTemplate, plotTemplate, areaTemplate);
+        } else {
+            owner.sendActionBar(caption, playerTemplate, plotTemplate, areaTemplate);
+        }
+    }
+
     public void logout(UUID uuid) {
         feedRunnable.remove(uuid);
         healRunnable.remove(uuid);
+        playerEffects.remove(uuid);
+    }
+
+    /**
+     * Marks an effect as a status effect that will be removed on leaving a plot
+     * @param uuid The uuid of the player the effect belongs to
+     * @param name The name of the status effect
+     * @param expiresAt The time when the effect expires
+     * @since 6.10.0
+     */
+    public void addEffect(@NonNull UUID uuid, @NonNull String name, long expiresAt) {
+        List<StatusEffect> effects = playerEffects.getOrDefault(uuid, new ArrayList<>());
+        effects.removeIf(effect -> effect.name.equals(name));
+        if (expiresAt != -1) {
+            effects.add(new StatusEffect(name, expiresAt));
+        }
+        playerEffects.put(uuid, effects);
     }
 
     private static class Interval {
@@ -514,5 +523,14 @@ public class PlotListener {
         }
 
     }
+
+    private record StatusEffect(@NonNull String name, long expiresAt) {
+
+        private StatusEffect(@NonNull String name, long expiresAt) {
+                this.name = name;
+                this.expiresAt = expiresAt;
+            }
+
+        }
 
 }

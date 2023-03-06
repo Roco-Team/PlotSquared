@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.plot;
 
@@ -39,16 +32,14 @@ import com.plotsquared.core.configuration.caption.TranslatableCaption;
 import com.plotsquared.core.database.DBFunc;
 import com.plotsquared.core.events.Result;
 import com.plotsquared.core.events.TeleportCause;
-import com.plotsquared.core.generator.HybridPlotWorld;
+import com.plotsquared.core.generator.ClassicPlotWorld;
 import com.plotsquared.core.listener.PlotListener;
 import com.plotsquared.core.location.BlockLoc;
 import com.plotsquared.core.location.Direction;
 import com.plotsquared.core.location.Location;
-import com.plotsquared.core.location.PlotLoc;
 import com.plotsquared.core.permissions.Permission;
 import com.plotsquared.core.player.ConsolePlayer;
 import com.plotsquared.core.player.PlotPlayer;
-import com.plotsquared.core.plot.expiration.ExpireManager;
 import com.plotsquared.core.plot.expiration.PlotAnalysis;
 import com.plotsquared.core.plot.flag.FlagContainer;
 import com.plotsquared.core.plot.flag.GlobalFlagContainer;
@@ -59,10 +50,10 @@ import com.plotsquared.core.plot.flag.implementations.KeepFlag;
 import com.plotsquared.core.plot.flag.implementations.ServerPlotFlag;
 import com.plotsquared.core.plot.flag.types.DoubleFlag;
 import com.plotsquared.core.plot.schematic.Schematic;
+import com.plotsquared.core.plot.world.SinglePlotArea;
 import com.plotsquared.core.queue.QueueCoordinator;
 import com.plotsquared.core.util.EventDispatcher;
 import com.plotsquared.core.util.MathMan;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.PlayerManager;
 import com.plotsquared.core.util.RegionManager;
 import com.plotsquared.core.util.RegionUtil;
@@ -122,16 +113,13 @@ import static com.plotsquared.core.util.entity.EntityCategories.CAP_VEHICLE;
  */
 public class Plot {
 
-
+    @Deprecated(forRemoval = true, since = "6.6.0")
     public static final int MAX_HEIGHT = 256;
 
     private static final Logger LOGGER = LogManager.getLogger("PlotSquared/" + Plot.class.getSimpleName());
     private static final DecimalFormat FLAG_DECIMAL_FORMAT = new DecimalFormat("0");
     private static final MiniMessage MINI_MESSAGE = MiniMessage.builder().build();
     private static final Cleaner CLEANER = Cleaner.create();
-
-    static Set<Plot> connected_cache;
-    static Set<CuboidRegion> regions_cache;
 
     static {
         FLAG_DECIMAL_FORMAT.setMaximumFractionDigits(340);
@@ -215,14 +203,19 @@ public class Plot {
      */
     private Plot origin;
 
+    private Set<Plot> connectedCache;
+
     /**
      * Constructor for a new plot.
      * (Only changes after plot.create() will be properly set in the database)
      *
+     * <p>
+     * See {@link Plot#getPlot(Location)} for existing plots
+     * </p>
+     *
      * @param area  the PlotArea where the plot is located
      * @param id    the plot id
      * @param owner the plot owner
-     * @see Plot#getPlot(Location) for existing plots
      */
     public Plot(final PlotArea area, final @NonNull PlotId id, final UUID owner) {
         this(area, id, owner, 0);
@@ -232,9 +225,12 @@ public class Plot {
      * Constructor for an unowned plot.
      * (Only changes after plot.create() will be properly set in the database)
      *
+     * <p>
+     * See {@link Plot#getPlot(Location)} for existing plots
+     * </p>
+     *
      * @param area the PlotArea where the plot is located
      * @param id   the plot id
-     * @see Plot#getPlot(Location) for existing plots
      */
     public Plot(final @NonNull PlotArea area, final @NonNull PlotId id) {
         this(area, id, null, 0);
@@ -245,11 +241,14 @@ public class Plot {
      * The database will ignore any queries regarding temporary plots.
      * Please note that some bulk plot management functions may still affect temporary plots (TODO: fix this)
      *
+     * <p>
+     * See {@link Plot#getPlot(Location)} for existing plots
+     * </p>
+     *
      * @param area  the PlotArea where the plot is located
      * @param id    the plot id
      * @param owner the owner of the plot
      * @param temp  Represents whatever the database manager needs it to
-     * @see Plot#getPlot(Location) for existing plots
      */
     public Plot(final PlotArea area, final @NonNull PlotId id, final UUID owner, final int temp) {
         this.area = area;
@@ -266,6 +265,10 @@ public class Plot {
     /**
      * Constructor for a saved plots (Used by the database manager when plots are fetched)
      *
+     * <p>
+     * See {@link Plot#getPlot(Location)} for existing plots
+     * </p>
+     *
      * @param id        the plot id
      * @param owner     the plot owner
      * @param trusted   the plot trusted players
@@ -278,7 +281,6 @@ public class Plot {
      * @param merged    an array giving merged plots
      * @param timestamp when the plot was created
      * @param temp      value representing whatever DBManager needs to to. Do not touch tbh.
-     * @see Plot#getPlot(Location) for existing plots
      */
     public Plot(
             @NonNull PlotId id,
@@ -418,9 +420,12 @@ public class Plot {
     /**
      * Return a new/cached plot object at a given location.
      *
+     * <p>
+     * Use {@link PlotPlayer#getCurrentPlot()} if a player is expected here.
+     * </p>
+     *
      * @param location the location of the plot
      * @return plot at location or null
-     * @see PlotPlayer#getCurrentPlot() if a player is expected here.
      */
     public static @Nullable Plot getPlot(final @NonNull Location location) {
         final PlotArea pa = location.getPlotArea();
@@ -569,7 +574,14 @@ public class Plot {
             return false;
         }
         final Set<Plot> connected = getConnectedPlots();
-        return connected.stream().anyMatch(current -> uuid.equals(current.getOwner()));
+        for (Plot current : connected) {
+            // can skip ServerPlotFlag check in getOwner()
+            // as flags are synchronized between plots
+            if (uuid.equals(current.getOwnerAbs())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -588,10 +600,13 @@ public class Plot {
     /**
      * Get the plot owner of this particular sub-plot.
      * (Merged plots can have multiple owners)
-     * Direct access is discouraged: use getOwners()
+     * Direct access is discouraged: use {@link #getOwners()}
+     *
+     * <p>
+     * Use {@link #getOwnerAbs()} to get the owner as stored in the database
+     * </p>
      *
      * @return Server if ServerPlot flag set, else {@link #getOwnerAbs()}
-     * @see #getOwnerAbs() getOwnerAbs() to get the owner as stored in the database
      */
     public @Nullable UUID getOwner() {
         if (this.getFlag(ServerPlotFlag.class)) {
@@ -1094,8 +1109,8 @@ public class Plot {
      * @return A boolean indicating whether or not the operation succeeded
      */
     public <V> boolean setFlag(final @NonNull PlotFlag<V, ?> flag) {
-        if (flag instanceof KeepFlag && ExpireManager.IMP != null) {
-            ExpireManager.IMP.updateExpired(this);
+        if (flag instanceof KeepFlag && PlotSquared.platform().expireManager() != null) {
+            PlotSquared.platform().expireManager().updateExpired(this);
         }
         for (final Plot plot : this.getConnectedPlots()) {
             plot.getFlagContainer().addFlag(flag);
@@ -1201,12 +1216,6 @@ public class Plot {
      *
      * @return array of entity counts
      * @see RegionManager#countEntities(Plot)
-     *         0 = Entity
-     *         1 = Animal
-     *         2 = Monster
-     *         3 = Mob
-     *         4 = Boat
-     *         5 = Misc
      */
     public int[] countEntities() {
         int[] count = new int[6];
@@ -1225,7 +1234,7 @@ public class Plot {
     /**
      * Returns true if a previous task was running
      *
-     * @return true if a previous task is running
+     * @return {@code true} if a previous task is running
      */
     public int addRunning() {
         int value = this.getRunning();
@@ -1269,7 +1278,7 @@ public class Plot {
     /**
      * Unclaim the plot (does not modify terrain). Changes made to this plot will not be reflected in unclaimed plot objects.
      *
-     * @return false if the Plot has no owner, otherwise true.
+     * @return {@code false} if the Plot has no owner, otherwise {@code true}.
      */
     public boolean unclaim() {
         if (!this.hasOwner()) {
@@ -1290,6 +1299,7 @@ public class Plot {
             DBFunc.delete(current);
             current.setOwnerAbs(null);
             current.settings = null;
+            current.clearCache();
             for (final PlotPlayer<?> pp : players) {
                 this.plotListener.plotEntry(pp, current);
             }
@@ -1329,7 +1339,7 @@ public class Plot {
             return Location.at(
                     "",
                     0,
-                    this.getArea() instanceof HybridPlotWorld ? ((HybridPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
+                    this.getArea() instanceof ClassicPlotWorld ? ((ClassicPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
                     0
             );
         }
@@ -1359,7 +1369,7 @@ public class Plot {
         int z = largest.getMinimumPoint().getZ() - 1;
         PlotManager manager = getManager();
         int y = isLoaded() ? this.worldUtil.getHighestBlockSynchronous(getWorldName(), x, z) : 62;
-        if (area.allowSigns() && (y <= 0 || y >= 255)) {
+        if (area.allowSigns() && (y <= area.getMinGenHeight() || y >= area.getMaxGenHeight())) {
             y = Math.max(y, manager.getSignLoc(this).getY() - 1);
         }
         return Location.at(getWorldName(), x, y + 1, z);
@@ -1375,7 +1385,7 @@ public class Plot {
         if (isLoaded()) {
             this.worldUtil.getHighestBlock(getWorldName(), x, z, y -> {
                 int height = y;
-                if (area.allowSigns() && (y <= 0 || y >= 255)) {
+                if (area.allowSigns() && (y <= area.getMinGenHeight() || y >= area.getMaxGenHeight())) {
                     height = Math.max(y, manager.getSignLoc(this).getY() - 1);
                 }
                 result.accept(Location.at(getWorldName(), x, height + 1, z));
@@ -1404,19 +1414,11 @@ public class Plot {
                 return Location.at(
                         "",
                         0,
-                        this.getArea() instanceof HybridPlotWorld ? ((HybridPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
+                        this.getArea() instanceof ClassicPlotWorld ? ((ClassicPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
                         0
                 );
             }
-            Location location = Location
-                    .at(
-                            bottom.getWorldName(),
-                            bottom.getX() + home.getX(),
-                            bottom.getY() + home.getY(),
-                            bottom.getZ() + home.getZ(),
-                            home.getYaw(),
-                            home.getPitch()
-                    );
+            Location location = toHomeLocation(bottom, home);
             if (!this.worldUtil.getBlockSynchronous(location).getBlockType().getMaterial().isAir()) {
                 location = location.withY(
                         Math.max(1 + this.worldUtil.getHighestBlockSynchronous(
@@ -1443,21 +1445,13 @@ public class Plot {
                 result.accept(Location.at(
                         "",
                         0,
-                        this.getArea() instanceof HybridPlotWorld ? ((HybridPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
+                        this.getArea() instanceof ClassicPlotWorld ? ((ClassicPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
                         0
                 ));
                 return;
             }
             Location bottom = this.getBottomAbs();
-            Location location = Location
-                    .at(
-                            bottom.getWorldName(),
-                            bottom.getX() + home.getX(),
-                            bottom.getY() + home.getY(),
-                            bottom.getZ() + home.getZ(),
-                            home.getYaw(),
-                            home.getPitch()
-                    );
+            Location location = toHomeLocation(bottom, home);
             this.worldUtil.getBlock(location, block -> {
                 if (!block.getBlockType().getMaterial().isAir()) {
                     this.worldUtil.getHighestBlock(this.getWorldName(), location.getX(), location.getZ(),
@@ -1470,6 +1464,17 @@ public class Plot {
         }
     }
 
+    private Location toHomeLocation(Location bottom, BlockLoc relativeHome) {
+        return Location.at(
+                bottom.getWorldName(),
+                bottom.getX() + relativeHome.getX(),
+                relativeHome.getY(), // y is absolute
+                bottom.getZ() + relativeHome.getZ(),
+                relativeHome.getYaw(),
+                relativeHome.getPitch()
+        );
+    }
+
     /**
      * Sets the home location
      *
@@ -1477,7 +1482,7 @@ public class Plot {
      */
     public void setHome(BlockLoc location) {
         Plot plot = this.getBasePlot(false);
-        if (location != null && new BlockLoc(0, 0, 0).equals(location)) {
+        if (BlockLoc.ZERO.equals(location) || BlockLoc.MINY.equals(location)) {
             return;
         }
         plot.getSettings().setPosition(location);
@@ -1506,12 +1511,18 @@ public class Plot {
     @Deprecated
     public Location getDefaultHomeSynchronous(final boolean member) {
         Plot plot = this.getBasePlot(false);
-        PlotLoc loc = member ? area.getDefaultHome() : area.getNonmemberHome();
+        BlockLoc loc = member ? area.defaultHome() : area.nonmemberHome();
         if (loc != null) {
             int x;
             int z;
             if (loc.getX() == Integer.MAX_VALUE && loc.getZ() == Integer.MAX_VALUE) {
                 // center
+                if (getArea() instanceof SinglePlotArea) {
+                    int y = loc.getY() == Integer.MIN_VALUE
+                            ? (isLoaded() ? this.worldUtil.getHighestBlockSynchronous(plot.getWorldName(), 0, 0) + 1 : 63)
+                            : loc.getY();
+                    return Location.at(plot.getWorldName(), 0, y, 0, 0, 0);
+                }
                 CuboidRegion largest = plot.getLargestRegion();
                 x = (largest.getMaximumPoint().getX() >> 1) - (largest.getMinimumPoint().getX() >> 1) + largest
                         .getMinimumPoint()
@@ -1525,10 +1536,14 @@ public class Plot {
                 x = bot.getX() + loc.getX();
                 z = bot.getZ() + loc.getZ();
             }
-            int y = loc.getY() < 1
+            int y = loc.getY() == Integer.MIN_VALUE
                     ? (isLoaded() ? this.worldUtil.getHighestBlockSynchronous(plot.getWorldName(), x, z) + 1 : 63)
                     : loc.getY();
-            return Location.at(plot.getWorldName(), x, y, z);
+            return Location.at(plot.getWorldName(), x, y, z, loc.getYaw(), loc.getPitch());
+        }
+        if (getArea() instanceof SinglePlotArea) {
+            int y = isLoaded() ? this.worldUtil.getHighestBlockSynchronous(plot.getWorldName(), 0, 0) + 1 : 63;
+            return Location.at(plot.getWorldName(), 0, y, 0, 0, 0);
         }
         // Side
         return plot.getSideSynchronous();
@@ -1540,31 +1555,36 @@ public class Plot {
             result.accept(Location.at(
                     "",
                     0,
-                    this.getArea() instanceof HybridPlotWorld ? ((HybridPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
+                    this.getArea() instanceof ClassicPlotWorld ? ((ClassicPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 4,
                     0
             ));
             return;
         }
-        PlotLoc loc = member ? area.getDefaultHome() : area.getNonmemberHome();
+        BlockLoc loc = member ? area.defaultHome() : area.nonmemberHome();
         if (loc != null) {
             int x;
             int z;
             if (loc.getX() == Integer.MAX_VALUE && loc.getZ() == Integer.MAX_VALUE) {
                 // center
-                CuboidRegion largest = plot.getLargestRegion();
-                x = (largest.getMaximumPoint().getX() >> 1) - (largest.getMinimumPoint().getX() >> 1) + largest
-                        .getMinimumPoint()
-                        .getX();
-                z = (largest.getMaximumPoint().getZ() >> 1) - (largest.getMinimumPoint().getZ() >> 1) + largest
-                        .getMinimumPoint()
-                        .getZ();
+                if (getArea() instanceof SinglePlotArea) {
+                    x = 0;
+                    z = 0;
+                } else {
+                    CuboidRegion largest = plot.getLargestRegion();
+                    x = (largest.getMaximumPoint().getX() >> 1) - (largest.getMinimumPoint().getX() >> 1) + largest
+                            .getMinimumPoint()
+                            .getX();
+                    z = (largest.getMaximumPoint().getZ() >> 1) - (largest.getMinimumPoint().getZ() >> 1) + largest
+                            .getMinimumPoint()
+                            .getZ();
+                }
             } else {
                 // specific
                 Location bot = plot.getBottomAbs();
                 x = bot.getX() + loc.getX();
                 z = bot.getZ() + loc.getZ();
             }
-            if (loc.getY() < 1) {
+            if (loc.getY() == Integer.MIN_VALUE) {
                 if (isLoaded()) {
                     this.worldUtil.getHighestBlock(
                             plot.getWorldName(),
@@ -1573,22 +1593,27 @@ public class Plot {
                             y -> result.accept(Location.at(plot.getWorldName(), x, y + 1, z))
                     );
                 } else {
-                    result.accept(Location.at(plot.getWorldName(), x, 63, z));
+                    int y = this.getArea() instanceof ClassicPlotWorld ? ((ClassicPlotWorld) this.getArea()).PLOT_HEIGHT + 1 : 63;
+                    result.accept(Location.at(plot.getWorldName(), x, y, z, loc.getYaw(), loc.getPitch()));
                 }
             } else {
-                result.accept(Location.at(plot.getWorldName(), x, loc.getY(), z));
+                result.accept(Location.at(plot.getWorldName(), x, loc.getY(), z, loc.getYaw(), loc.getPitch()));
             }
             return;
         }
         // Side
+        if (getArea() instanceof SinglePlotArea) {
+            int y = isLoaded() ? this.worldUtil.getHighestBlockSynchronous(plot.getWorldName(), 0, 0) + 1 : 63;
+            result.accept(Location.at(plot.getWorldName(), 0, y, 0, 0, 0));
+        }
         plot.getSide(result);
     }
 
     public double getVolume() {
         double count = 0;
         for (CuboidRegion region : getRegions()) {
-            count += (region.getMaximumPoint().getX() - (double) region.getMinimumPoint().getX() + 1) * (
-                    region.getMaximumPoint().getZ() - (double) region.getMinimumPoint().getZ() + 1) * MAX_HEIGHT;
+            // CuboidRegion#getArea is deprecated and we want to ensure use of correct height
+            count += region.getLength() * region.getWidth() * (area.getMaxGenHeight() - area.getMinGenHeight() + 1);
         }
         return count;
     }
@@ -1666,7 +1691,7 @@ public class Plot {
         return base.settings != null && base.settings.getRatings() != null;
     }
 
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = true, since = "6.1.0")
     public boolean claim(final @NonNull PlotPlayer<?> player, boolean teleport, String schematic) {
         if (!canClaim(player)) {
             return false;
@@ -1674,7 +1699,7 @@ public class Plot {
         return claim(player, teleport, schematic, true);
     }
 
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = true, since = "6.1.0")
     public boolean claim(final @NonNull PlotPlayer<?> player, boolean teleport, String schematic, boolean updateDB) {
         return claim(player, teleport, schematic, updateDB, false);
     }
@@ -1688,6 +1713,7 @@ public class Plot {
      * @param updateDB  If the database should be updated
      * @param auto      If the plot is being claimed by a /plot auto
      * @return success
+     * @since 6.1.0
      */
     public boolean claim(
             final @NonNull PlotPlayer<?> player, boolean teleport, String schematic, boolean updateDB,
@@ -1705,11 +1731,15 @@ public class Plot {
             area.addPlot(this);
             updateWorldBorder();
         }
-        this.getPlotModificationManager().setSign(player.getName());
         player.sendMessage(TranslatableCaption.of("working.claimed"), Template.of("plot", this.getId().toString()));
-        if (teleport && Settings.Teleport.ON_CLAIM) {
-            teleportPlayer(player, auto ? TeleportCause.COMMAND_AUTO : TeleportCause.COMMAND_CLAIM, result -> {
-            });
+        if (teleport) {
+            if (!auto && Settings.Teleport.ON_CLAIM) {
+                teleportPlayer(player, TeleportCause.COMMAND_CLAIM, result -> {
+                });
+            } else if (auto && Settings.Teleport.ON_AUTO) {
+                teleportPlayer(player, TeleportCause.COMMAND_AUTO, result -> {
+                });
+            }
         }
         PlotArea plotworld = getArea();
         if (plotworld.isSchematicOnClaim()) {
@@ -1727,18 +1757,28 @@ public class Plot {
                 e.printStackTrace();
                 return true;
             }
-            schematicHandler.paste(sch, this, 0, 1, 0, Settings.Schematics.PASTE_ON_TOP, player, new RunnableVal<>() {
-                @Override
-                public void run(Boolean value) {
-                    if (value) {
-                        player.sendMessage(TranslatableCaption.of("schematics.schematic_paste_success"));
-                    } else {
-                        player.sendMessage(TranslatableCaption.of("schematics.schematic_paste_failed"));
+            schematicHandler.paste(
+                    sch,
+                    this,
+                    0,
+                    getArea().getMinBuildHeight(),
+                    0,
+                    Settings.Schematics.PASTE_ON_TOP,
+                    player,
+                    new RunnableVal<>() {
+                        @Override
+                        public void run(Boolean value) {
+                            if (value) {
+                                player.sendMessage(TranslatableCaption.of("schematics.schematic_paste_success"));
+                            } else {
+                                player.sendMessage(TranslatableCaption.of("schematics.schematic_paste_failed"));
+                            }
+                        }
                     }
-                }
-            });
+            );
         }
         plotworld.getPlotManager().claimPlot(this, null);
+        this.getPlotModificationManager().setSign(player.getName());
         return true;
     }
 
@@ -1801,8 +1841,8 @@ public class Plot {
         }
         // Swap cached
         final PlotId temp = PlotId.of(this.getId().getX(), this.getId().getY());
-        this.id = plot.getId().copy();
-        plot.id = temp.copy();
+        this.id = plot.getId();
+        plot.id = temp;
         this.area.removePlot(this.getId());
         plot.area.removePlot(plot.getId());
         this.area.addPlotAbs(this);
@@ -1828,8 +1868,9 @@ public class Plot {
             return false;
         }
         this.area.removePlot(this.id);
-        this.id = plot.getId().copy();
+        this.id = plot.getId();
         this.area.addPlotAbs(this);
+        clearCache();
         DBFunc.movePlot(this, plot);
         TaskManager.runTaskLater(whenDone, TaskTime.ticks(1L));
         return true;
@@ -2094,17 +2135,16 @@ public class Plot {
                     this.origin.origin = base;
                     other.origin = base;
                     this.origin = base;
-                    connected_cache = null;
+                    this.connectedCache = null;
                 }
             } else {
                 if (this.origin != null) {
                     this.origin.origin = null;
                     this.origin = null;
                 }
-                connected_cache = null;
+                this.connectedCache = null;
             }
             DBFunc.setMerged(this, this.getSettings().getMerged());
-            regions_cache = null;
         }
     }
 
@@ -2139,8 +2179,7 @@ public class Plot {
     }
 
     public void clearCache() {
-        connected_cache = null;
-        regions_cache = null;
+        this.connectedCache = null;
         if (this.origin != null) {
             this.origin.origin = null;
             this.origin = null;
@@ -2148,8 +2187,9 @@ public class Plot {
     }
 
     /**
-     * Gets the set home location or 0,0,0 if no location is set<br>
+     * Gets the set home location or 0,Integer#MIN_VALUE,0 if no location is set<br>
      * - Does not take the default home location into account
+     * - PlotSquared will internally find the correct place to teleport to if y = Integer#MIN_VALUE when teleporting to the plot.
      *
      * @return home location
      */
@@ -2166,7 +2206,7 @@ public class Plot {
     public boolean canClaim(@NonNull PlotPlayer<?> player) {
         PlotCluster cluster = this.getCluster();
         if (cluster != null) {
-            if (!cluster.isAdded(player.getUUID()) && !Permissions.hasPermission(player, "plots.admin.command.claim")) {
+            if (!cluster.isAdded(player.getUUID()) && !player.hasPermission("plots.admin.command.claim")) {
                 return false;
             }
         }
@@ -2266,10 +2306,9 @@ public class Plot {
         if (!this.isMerged()) {
             return Collections.singleton(this);
         }
-        if (connected_cache != null && connected_cache.contains(this)) {
-            return connected_cache;
+        if (this.connectedCache != null && this.connectedCache.contains(this)) {
+            return this.connectedCache;
         }
-        regions_cache = null;
 
         HashSet<Plot> tmpSet = new HashSet<>();
         tmpSet.add(this);
@@ -2374,7 +2413,7 @@ public class Plot {
                 }
             }
         }
-        connected_cache = tmpSet;
+        this.connectedCache = tmpSet;
         return tmpSet;
     }
 
@@ -2386,19 +2425,15 @@ public class Plot {
      * @return all regions within the plot
      */
     public @NonNull Set<CuboidRegion> getRegions() {
-        if (regions_cache != null && connected_cache != null && connected_cache.contains(this)) {
-            return regions_cache;
-        }
         if (!this.isMerged()) {
-            Location pos1 = this.getBottomAbs();
-            Location pos2 = this.getTopAbs();
-            connected_cache = Sets.newHashSet(this);
+            Location pos1 = this.getBottomAbs().withY(getArea().getMinBuildHeight());
+            Location pos2 = this.getTopAbs().withY(getArea().getMaxBuildHeight());
+            this.connectedCache = Sets.newHashSet(this);
             CuboidRegion rg = new CuboidRegion(pos1.getBlockVector3(), pos2.getBlockVector3());
-            regions_cache = Collections.singleton(rg);
-            return regions_cache;
+            return Collections.singleton(rg);
         }
         Set<Plot> plots = this.getConnectedPlots();
-        Set<CuboidRegion> regions = regions_cache = new HashSet<>();
+        Set<CuboidRegion> regions = new HashSet<>();
         Set<PlotId> visited = new HashSet<>();
         for (Plot current : plots) {
             if (visited.contains(current.getId())) {
@@ -2471,7 +2506,7 @@ public class Plot {
                 }
             }
             int minHeight = getArea().getMinBuildHeight();
-            int maxHeight = getArea().getMaxBuildHeight();
+            int maxHeight = getArea().getMaxBuildHeight() - 1;
             Location gtopabs = this.area.getPlotAbs(top).getTopAbs();
             Location gbotabs = this.area.getPlotAbs(bot).getBottomAbs();
             visited.addAll(Lists.newArrayList((Iterable<? extends PlotId>) PlotId.PlotRangeIterator.range(bot, top)));
@@ -2562,7 +2597,7 @@ public class Plot {
             Template plotTemplate = Template.of("plot", this.toString());
             Template messageTemplate = Template.of("message", message);
             for (final PlotPlayer<?> player : players) {
-                if (isOwner(player.getUUID()) || Permissions.hasPermission(player, Permission.PERMISSION_ADMIN_DEBUG_OTHER)) {
+                if (isOwner(player.getUUID()) || player.hasPermission(Permission.PERMISSION_ADMIN_DEBUG_OTHER)) {
                     player.sendMessage(caption, plotTemplate, messageTemplate);
                 }
             }
@@ -2599,8 +2634,7 @@ public class Plot {
             return;
         }
         final Consumer<Location> locationConsumer = location -> {
-            if (Settings.Teleport.DELAY == 0 || Permissions
-                    .hasPermission(player, "plots.teleport.delay.bypass")) {
+            if (Settings.Teleport.DELAY == 0 || player.hasPermission("plots.teleport.delay.bypass")) {
                 player.sendMessage(TranslatableCaption.of("teleport.teleported_to_plot"));
                 player.teleport(location, cause);
                 resultConsumer.accept(true);
@@ -2634,7 +2668,7 @@ public class Plot {
     /**
      * Checks if the owner of this Plot is online.
      *
-     * @return true if the owner of the Plot is online
+     * @return {@code true} if the owner of the Plot is online
      */
     public boolean isOnline() {
         if (!this.hasOwner()) {
@@ -2795,15 +2829,15 @@ public class Plot {
                     Component members = PlayerManager.getPlayerList(this.getMembers(), player);
                     Component denied = PlayerManager.getPlayerList(this.getDenied(), player);
                     String seen;
-                    if (Settings.Enabled_Components.PLOT_EXPIRY && ExpireManager.IMP != null) {
+                    if (Settings.Enabled_Components.PLOT_EXPIRY && PlotSquared.platform().expireManager() != null) {
                         if (this.isOnline()) {
                             seen = TranslatableCaption.of("info.now").getComponent(player);
                         } else {
-                            int time = (int) (ExpireManager.IMP.getAge(this) / 1000);
+                            int time = (int) (PlotSquared.platform().expireManager().getAge(this, false) / 1000);
                             if (time != 0) {
                                 seen = TimeUtil.secToTime(time);
                             } else {
-                                seen = TranslatableCaption.of("info.known").getComponent(player);
+                                seen = TranslatableCaption.of("info.unknown").getComponent(player);
                             }
                         }
                     } else {
@@ -2821,7 +2855,7 @@ public class Plot {
                         flags = MINI_MESSAGE.parse(TranslatableCaption.of("info.none").getComponent(player));
                     } else {
                         TextComponent.Builder flagBuilder = Component.text();
-                        String prefix = " ";
+                        String prefix = "";
                         for (final PlotFlag<?, ?> flag : flagCollection) {
                             Object value;
                             if (flag instanceof DoubleFlag && !Settings.General.SCIENTIFIC) {
@@ -2893,12 +2927,19 @@ public class Plot {
                     Template flagsTemplate = Template.of("flags", flags);
                     Template creationTemplate = Template.of("creationdate", newDate);
                     Template buildTemplate = Template.of("build", String.valueOf(build));
-                    if (iInfo.getComponent(player).contains("<rating>")) {
+                    Template sizeTemplate = Template.of("size", String.valueOf(getConnectedPlots().size()));
+                    String component = iInfo.getComponent(player);
+                    if (component.contains("<rating>") || component.contains("<likes>")) {
                         TaskManager.runTaskAsync(() -> {
                             Template ratingTemplate;
+                            Template likesTemplate;
                             if (Settings.Ratings.USE_LIKES) {
                                 ratingTemplate = Template.of(
                                         "rating",
+                                        String.format("%.0f%%", Like.getLikesPercentage(this) * 100D)
+                                );
+                                likesTemplate = Template.of(
+                                        "likes",
                                         String.format("%.0f%%", Like.getLikesPercentage(this) * 100D)
                                 );
                             } else {
@@ -2927,6 +2968,7 @@ public class Plot {
                                         );
                                     }
                                 }
+                                likesTemplate = Template.of("likes", "N/A");
                             }
                             future.complete(StaticCaption.of(MINI_MESSAGE.serialize(MINI_MESSAGE
                                     .parse(
@@ -2949,6 +2991,8 @@ public class Plot {
                                             buildTemplate,
                                             ratingTemplate,
                                             creationTemplate,
+                                            sizeTemplate,
+                                            likesTemplate,
                                             footerTemplate
                                     ))));
                         });
@@ -2973,6 +3017,8 @@ public class Plot {
                                     seenTemplate,
                                     flagsTemplate,
                                     buildTemplate,
+                                    creationTemplate,
+                                    sizeTemplate,
                                     footerTemplate
                             ))));
                 }
@@ -2984,8 +3030,11 @@ public class Plot {
      * If rating categories are enabled, get the average rating by category.<br>
      * - The index corresponds to the index of the category in the config
      *
+     * <p>
+     * See {@link Settings.Ratings#CATEGORIES} for rating categories
+     * </p>
+     *
      * @return Average ratings in each category
-     * @see Settings.Ratings#CATEGORIES Rating categories
      */
     public @NonNull double[] getAverageRatings() {
         Map<UUID, Integer> rating;

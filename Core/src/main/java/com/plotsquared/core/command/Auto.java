@@ -1,33 +1,25 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
-import com.google.common.reflect.TypeToken;
+import cloud.commandframework.services.ServicePipeline;
 import com.google.inject.Inject;
-import com.intellectualsites.services.ServicePipeline;
 import com.plotsquared.core.PlotSquared;
 import com.plotsquared.core.configuration.Settings;
 import com.plotsquared.core.configuration.caption.TranslatableCaption;
@@ -46,11 +38,11 @@ import com.plotsquared.core.plot.world.PlotAreaManager;
 import com.plotsquared.core.services.plots.AutoService;
 import com.plotsquared.core.util.EconHandler;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.PlotExpression;
 import com.plotsquared.core.util.task.AutoClaimFinishTask;
 import com.plotsquared.core.util.task.RunnableVal;
 import com.plotsquared.core.util.task.TaskManager;
+import io.leangen.geantyref.TypeToken;
 import net.kyori.adventure.text.minimessage.Template;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -84,7 +76,7 @@ public class Auto extends SubCommand {
         this.eventDispatcher = eventDispatcher;
         this.econHandler = econHandler;
         this.servicePipeline = servicePipeline;
-        this.servicePipeline.registerServiceType(TypeToken.of(AutoService.class), new AutoService.DefaultAutoService());
+        this.servicePipeline.registerServiceType(TypeToken.get(AutoService.class), new AutoService.DefaultAutoService());
         final AutoService.MultiPlotService multiPlotService = new AutoService.MultiPlotService();
         this.servicePipeline.registerServiceImplementation(AutoService.class, multiPlotService,
                 Collections.singletonList(multiPlotService)
@@ -253,11 +245,12 @@ public class Auto extends SubCommand {
         sizeX = event.getSizeX();
         sizeZ = event.getSizeZ();
         schematic = event.getSchematic();
-        if (!force && mega && !Permissions.hasPermission(player, Permission.PERMISSION_AUTO_MEGA)) {
+        if (!force && mega && !player.hasPermission(Permission.PERMISSION_AUTO_MEGA)) {
             player.sendMessage(
                     TranslatableCaption.of("permission.no_permission"),
                     Template.of("node", String.valueOf(Permission.PERMISSION_AUTO_MEGA))
             );
+            return false;
         }
         if (!force && sizeX * sizeZ > Settings.Claim.MAX_AUTO_AREA) {
             player.sendMessage(
@@ -285,11 +278,9 @@ public class Auto extends SubCommand {
                 );
                 return true;
             }
-            if (!force && !Permissions.hasPermission(
-                    player,
+            if (!force && !player.hasPermission(
                     Permission.PERMISSION_CLAIM_SCHEMATIC.format(schematic)
-            ) && !Permissions
-                    .hasPermission(player, "plots.admin.command.schematic")) {
+            ) && !player.hasPermission("plots.admin.command.schematic")) {
                 player.sendMessage(
                         TranslatableCaption.of("permission.no_permission"),
                         Template.of("node", "plots.claim.%s0")
@@ -344,6 +335,7 @@ public class Auto extends SubCommand {
                     continue;
                 }
                 plot.claim(player, !plotIterator.hasNext(), null, true, true);
+                eventDispatcher.callPostAuto(player, plot);
             }
             final PlotAutoMergeEvent mergeEvent = this.eventDispatcher.callAutoMerge(
                     plots.get(0),

@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -34,7 +27,6 @@ import com.plotsquared.core.permissions.Permission;
 import com.plotsquared.core.player.PlotPlayer;
 import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.StringMan;
 import com.plotsquared.core.util.task.TaskManager;
 import net.kyori.adventure.text.minimessage.Template;
@@ -98,8 +90,7 @@ public class Unlink extends SubCommand {
             return true;
         }
         boolean force = event.getEventResult() == Result.FORCE;
-        if (!force && !plot.isOwner(player.getUUID()) && !Permissions
-                .hasPermission(player, Permission.PERMISSION_ADMIN_COMMAND_UNLINK)) {
+        if (!force && !plot.isOwner(player.getUUID()) && !player.hasPermission(Permission.PERMISSION_ADMIN_COMMAND_UNLINK)) {
             player.sendMessage(TranslatableCaption.of("permission.no_plot_perms"));
             return true;
         }
@@ -109,6 +100,7 @@ public class Unlink extends SubCommand {
                 return;
             }
             player.sendMessage(TranslatableCaption.of("merge.unlink_success"));
+            eventDispatcher.callPostUnlink(plot, PlotUnlinkEvent.REASON.PLAYER_COMMAND);
         };
         if (hasConfirmation(player)) {
             CmdConfirm.addPending(player, "/plot unlink " + plot.getId(), runnable);

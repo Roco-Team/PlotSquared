@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.generator;
 
@@ -96,7 +89,7 @@ public abstract class SquarePlotManager extends GridPlotManager {
                 .floor(squarePlotWorld.ROAD_WIDTH / 2) - 1;
         int z = (squarePlotWorld.ROAD_OFFSET_Z + (pz * (squarePlotWorld.ROAD_WIDTH + squarePlotWorld.PLOT_WIDTH))) - (int) Math
                 .floor(squarePlotWorld.ROAD_WIDTH / 2) - 1;
-        return Location.at(squarePlotWorld.getWorldName(), x, Math.min(getWorldHeight(), 255), z);
+        return Location.at(squarePlotWorld.getWorldName(), x, squarePlotWorld.getMaxGenHeight(), z);
     }
 
     @Override
@@ -121,26 +114,14 @@ public abstract class SquarePlotManager extends GridPlotManager {
             end = pathWidthLower + squarePlotWorld.PLOT_WIDTH;
         }
         int size = squarePlotWorld.PLOT_WIDTH + squarePlotWorld.ROAD_WIDTH;
-        int idx;
-        if (x < 0) {
-            idx = x / size;
-            x = size + (x % size);
-        } else {
-            idx = (x / size) + 1;
-            x = x % size;
-        }
-        int idz;
-        if (z < 0) {
-            idz = z / size;
-            z = size + (z % size);
-        } else {
-            idz = (z / size) + 1;
-            z = z % size;
-        }
-        if (z <= pathWidthLower || z > end || x <= pathWidthLower || x > end) {
+        int dx = Math.floorDiv(x, size) + 1;
+        int rx = Math.floorMod(x, size);
+        int dz = Math.floorDiv(z, size) + 1;
+        int rz = Math.floorMod(z, size);
+        if (rz <= pathWidthLower || rz > end || rx <= pathWidthLower || rx > end) {
             return null;
         } else {
-            return PlotId.of(idx, idz);
+            return PlotId.of(dx, dz);
         }
     }
 
@@ -187,24 +168,10 @@ public abstract class SquarePlotManager extends GridPlotManager {
                 }
                 end = pathWidthLower + squarePlotWorld.PLOT_WIDTH;
             }
-            int dx;
-            int rx;
-            if (x < 0) {
-                dx = x / size;
-                rx = size + (x % size);
-            } else {
-                dx = (x / size) + 1;
-                rx = x % size;
-            }
-            int dz;
-            int rz;
-            if (z < 0) {
-                dz = z / size;
-                rz = size + (z % size);
-            } else {
-                dz = (z / size) + 1;
-                rz = z % size;
-            }
+            int dx = Math.floorDiv(x, size) + 1;
+            int rx = Math.floorMod(x, size);
+            int dz = Math.floorDiv(z, size) + 1;
+            int rz = Math.floorMod(z, size);
             PlotId id = PlotId.of(dx, dz);
             boolean[] merged = new boolean[]{rz <= pathWidthLower, rx > end, rz > end, rx <= pathWidthLower};
             int hash = HashUtil.hash(merged);
@@ -260,7 +227,7 @@ public abstract class SquarePlotManager extends GridPlotManager {
                 - (int) Math.floor(squarePlotWorld.ROAD_WIDTH / 2);
         int z = (squarePlotWorld.ROAD_OFFSET_Z + (pz * (squarePlotWorld.ROAD_WIDTH + squarePlotWorld.PLOT_WIDTH))) - squarePlotWorld.PLOT_WIDTH
                 - (int) Math.floor(squarePlotWorld.ROAD_WIDTH / 2);
-        return Location.at(squarePlotWorld.getWorldName(), x, squarePlotWorld.getMinBuildHeight(), z);
+        return Location.at(squarePlotWorld.getWorldName(), x, squarePlotWorld.getMinGenHeight(), z);
     }
 
 }

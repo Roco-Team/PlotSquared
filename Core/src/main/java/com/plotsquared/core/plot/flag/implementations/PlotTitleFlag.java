@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.plot.flag.implementations;
 
@@ -29,6 +22,7 @@ import com.plotsquared.core.configuration.caption.TranslatableCaption;
 import com.plotsquared.core.plot.PlotTitle;
 import com.plotsquared.core.plot.flag.FlagParseException;
 import com.plotsquared.core.plot.flag.PlotFlag;
+import com.plotsquared.core.util.StringMan;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class PlotTitleFlag extends PlotFlag<PlotTitle, PlotTitleFlag> {
@@ -56,16 +50,17 @@ public class PlotTitleFlag extends PlotFlag<PlotTitle, PlotTitleFlag> {
         if (!input.contains("\"")) {
             return new PlotTitleFlag(new PlotTitle(input, ""));
         }
-        input = input.substring(input.indexOf("\""));
-        input = input.substring(0, input.lastIndexOf("\"") + 1);
-        String[] inputs = input.split("\"");
-        PlotTitle value;
-        if (inputs.length == 2) {
-            value = new PlotTitle(inputs[1], "");
-        } else if (inputs.length > 3) {
-            value = new PlotTitle(inputs[1], inputs[3]);
-        } else {
+
+        var split = StringMan.splitMessage(input);
+
+        if (split.isEmpty() || split.size() > 2) {
             throw new FlagParseException(this, input, TranslatableCaption.of("flags.flag_error_title"));
+        }
+        PlotTitle value;
+        if (split.size() == 1) {
+            value = new PlotTitle(split.get(0), "");
+        } else {
+            value = new PlotTitle(split.get(0), split.get(1));
         }
         return new PlotTitleFlag(value);
     }

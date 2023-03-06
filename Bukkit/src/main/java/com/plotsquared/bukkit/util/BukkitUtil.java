@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.bukkit.util;
 
@@ -44,7 +37,6 @@ import com.plotsquared.core.util.task.TaskManager;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldedit.math.BlockVector2;
-import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.world.biome.BiomeType;
 import com.sk89q.worldedit.world.block.BlockCategories;
 import com.sk89q.worldedit.world.block.BlockState;
@@ -61,12 +53,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.WallSign;
+import org.bukkit.entity.Allay;
 import org.bukkit.entity.Ambient;
 import org.bukkit.entity.Animals;
 import org.bukkit.entity.AreaEffectCloud;
@@ -246,7 +238,9 @@ public class BukkitUtil extends WorldUtil {
             final World bukkitWorld = Objects.requireNonNull(getWorld(world));
             // Skip top and bottom block
             int air = 1;
-            for (int y = bukkitWorld.getMaxHeight() - 1; y >= 0; y--) {
+            int maxY = com.plotsquared.bukkit.util.BukkitWorld.getMaxWorldHeight(bukkitWorld);
+            int minY = com.plotsquared.bukkit.util.BukkitWorld.getMinWorldHeight(bukkitWorld);
+            for (int y = maxY - 1; y >= minY; y--) {
                 Block block = bukkitWorld.getBlockAt(x, y, z);
                 Material type = block.getType();
                 if (type.isSolid()) {
@@ -273,7 +267,9 @@ public class BukkitUtil extends WorldUtil {
         final World bukkitWorld = Objects.requireNonNull(getWorld(world));
         // Skip top and bottom block
         int air = 1;
-        for (int y = bukkitWorld.getMaxHeight() - 1; y >= 0; y--) {
+        int maxY = com.plotsquared.bukkit.util.BukkitWorld.getMaxWorldHeight(bukkitWorld);
+        int minY = com.plotsquared.bukkit.util.BukkitWorld.getMinWorldHeight(bukkitWorld);
+        for (int y = maxY - 1; y >= minY; y--) {
             Block block = bukkitWorld.getBlockAt(x, y, z);
             Material type = block.getType();
             if (type.isSolid()) {
@@ -345,13 +341,15 @@ public class BukkitUtil extends WorldUtil {
             final Block block = world.getBlockAt(location.getX(), location.getY(), location.getZ());
             final Material type = block.getType();
             if (type != Material.LEGACY_SIGN && type != Material.LEGACY_WALL_SIGN) {
-                BlockFace facing = BlockFace.EAST;
-                if (world.getBlockAt(location.getX(), location.getY(), location.getZ() + 1).getType().isSolid()) {
-                    facing = BlockFace.NORTH;
-                } else if (world.getBlockAt(location.getX() + 1, location.getY(), location.getZ()).getType().isSolid()) {
-                    facing = BlockFace.WEST;
-                } else if (world.getBlockAt(location.getX(), location.getY(), location.getZ() - 1).getType().isSolid()) {
-                    facing = BlockFace.SOUTH;
+                BlockFace facing = BlockFace.NORTH;
+                if (!world.getBlockAt(location.getX(), location.getY(), location.getZ() + 1).getType().isSolid()) {
+                    if (world.getBlockAt(location.getX() - 1, location.getY(), location.getZ()).getType().isSolid()) {
+                        facing = BlockFace.EAST;
+                    } else if (world.getBlockAt(location.getX() + 1, location.getY(), location.getZ()).getType().isSolid()) {
+                        facing = BlockFace.WEST;
+                    } else if (world.getBlockAt(location.getX(), location.getY(), location.getZ() - 1).getType().isSolid()) {
+                        facing = BlockFace.SOUTH;
+                    }
                 }
                 if (PlotSquared.platform().serverVersion()[1] == 13) {
                     block.setType(Material.valueOf(area.legacySignMaterial()), false);
@@ -371,7 +369,7 @@ public class BukkitUtil extends WorldUtil {
                     sign.setLine(i, LEGACY_COMPONENT_SERIALIZER
                             .serialize(MINI_MESSAGE.parse(lines[i].getComponent(LocaleHolder.console()), replacements)));
                 }
-                sign.update(true);
+                sign.update(true, false);
             }
         });
     }
@@ -380,27 +378,6 @@ public class BukkitUtil extends WorldUtil {
     public @NonNull StringComparison<BlockState>.ComparisonResult getClosestBlock(@NonNull String name) {
         BlockState state = BlockUtil.get(name);
         return new StringComparison<BlockState>().new ComparisonResult(1, state);
-    }
-
-    @Override
-    public void setBiomes(
-            final @NonNull String worldName,
-            final @NonNull CuboidRegion region,
-            final @NonNull BiomeType biomeType
-    ) {
-        final World world = getWorld(worldName);
-        if (world == null) {
-            LOGGER.warn("An error occurred while setting the biome because the world was null", new RuntimeException());
-            return;
-        }
-        final Biome biome = BukkitAdapter.adapt(biomeType);
-        for (int x = region.getMinimumPoint().getX(); x <= region.getMaximumPoint().getX(); x++) {
-            for (int z = region.getMinimumPoint().getZ(); z <= region.getMaximumPoint().getZ(); z++) {
-                if (world.getBiome(x, z) != biome) {
-                    world.setBiome(x, z, biome);
-                }
-            }
-        }
     }
 
     @Override
@@ -461,6 +438,9 @@ public class BukkitUtil extends WorldUtil {
                 allowedInterfaces.add(Animals.class);
                 allowedInterfaces.add(WaterMob.class);
                 allowedInterfaces.add(Ambient.class);
+                if (PlotSquared.platform().serverVersion()[1] >= 19) {
+                    allowedInterfaces.add(Allay.class);
+                }
             }
             case "tameable" -> allowedInterfaces.add(Tameable.class);
             case "vehicle" -> allowedInterfaces.add(Vehicle.class);

@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -39,7 +32,6 @@ import com.plotsquared.core.plot.flag.implementations.AnalysisFlag;
 import com.plotsquared.core.plot.flag.implementations.DoneFlag;
 import com.plotsquared.core.queue.GlobalBlockQueue;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.task.RunnableVal2;
 import com.plotsquared.core.util.task.RunnableVal3;
 import com.plotsquared.core.util.task.TaskManager;
@@ -58,6 +50,7 @@ import java.util.concurrent.CompletableFuture;
 public class Clear extends Command {
 
     private final EventDispatcher eventDispatcher;
+    @SuppressWarnings({"unused", "FieldCanBeLocal"})
     private final GlobalBlockQueue blockQueue;
 
     @Inject
@@ -95,13 +88,14 @@ public class Clear extends Command {
         }
         boolean force = eventResult == Result.FORCE;
         checkTrue(
-                force || plot.isOwner(player.getUUID()) || Permissions
-                        .hasPermission(player, "plots.admin.command.clear"),
+                force || plot.isOwner(player.getUUID()) || player.hasPermission("plots.admin.command.clear"),
                 TranslatableCaption.of("permission.no_plot_perms")
         );
         checkTrue(plot.getRunning() == 0, TranslatableCaption.of("errors.wait_for_timer"));
-        checkTrue(force || !Settings.Done.RESTRICT_BUILDING || !DoneFlag.isDone(plot) || Permissions
-                .hasPermission(player, "plots.continue"), TranslatableCaption.of("done.done_already_done"));
+        checkTrue(
+                force || !Settings.Done.RESTRICT_BUILDING || !DoneFlag.isDone(plot) || player.hasPermission("plots.continue"),
+                TranslatableCaption.of("done.done_already_done")
+        );
         confirm.run(this, () -> {
             if (Settings.Teleport.ON_CLEAR) {
                 plot.getPlayersInPlot().forEach(playerInPlot -> plot.teleportPlayer(playerInPlot, TeleportCause.COMMAND_CLEAR,
@@ -112,7 +106,6 @@ public class Clear extends Command {
             BackupManager.backup(player, plot, () -> {
                 final long start = System.currentTimeMillis();
                 boolean result = plot.getPlotModificationManager().clear(true, false, player, () -> {
-                    plot.getPlotModificationManager().unlink();
                     TaskManager.runTask(() -> {
                         plot.removeRunning();
                         // If the state changes, then mark it as no longer done

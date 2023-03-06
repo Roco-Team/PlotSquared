@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -29,6 +22,7 @@ import com.google.inject.Inject;
 import com.plotsquared.core.PlotSquared;
 import com.plotsquared.core.configuration.ConfigurationSection;
 import com.plotsquared.core.configuration.ConfigurationUtil;
+import com.plotsquared.core.configuration.Settings;
 import com.plotsquared.core.configuration.caption.CaptionHolder;
 import com.plotsquared.core.configuration.caption.Templates;
 import com.plotsquared.core.configuration.caption.TranslatableCaption;
@@ -54,7 +48,6 @@ import com.plotsquared.core.queue.QueueCoordinator;
 import com.plotsquared.core.setup.PlotAreaBuilder;
 import com.plotsquared.core.util.FileUtils;
 import com.plotsquared.core.util.MathMan;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.RegionUtil;
 import com.plotsquared.core.util.SchematicHandler;
 import com.plotsquared.core.util.SetupUtils;
@@ -63,6 +56,7 @@ import com.plotsquared.core.util.TabCompletions;
 import com.plotsquared.core.util.WorldUtil;
 import com.plotsquared.core.util.task.RunnableVal3;
 import com.sk89q.worldedit.EditSession;
+import com.sk89q.worldedit.EditSessionBuilder;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.entity.Player;
@@ -74,6 +68,7 @@ import com.sk89q.worldedit.function.operation.Operations;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.world.World;
 import net.kyori.adventure.text.minimessage.Template;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -143,7 +138,7 @@ public class Area extends SubCommand {
                     player.sendMessage(RequiredType.CONSOLE.getErrorMessage());
                     return false;
                 }
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_AREA_CREATE)) {
+                if (!player.hasPermission(Permission.PERMISSION_AREA_CREATE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_AREA_CREATE))
@@ -190,11 +185,12 @@ public class Area extends SubCommand {
                 final BlockVector3 playerSelectionMin = playerSelectedRegion.getMinimumPoint();
                 final BlockVector3 playerSelectionMax = playerSelectedRegion.getMaximumPoint();
                 // Create a new selection that spans the entire vertical range of the world
+                World world = playerSelectedRegion.getWorld();
                 final CuboidRegion selectedRegion =
                         new CuboidRegion(
                                 playerSelectedRegion.getWorld(),
-                                BlockVector3.at(playerSelectionMin.getX(), 0, playerSelectionMin.getZ()),
-                                BlockVector3.at(playerSelectionMax.getX(), 255, playerSelectionMax.getZ())
+                                BlockVector3.at(playerSelectionMin.getX(), world.getMinY(), playerSelectionMin.getZ()),
+                                BlockVector3.at(playerSelectionMax.getX(), world.getMaxY(), playerSelectionMax.getZ())
                         );
                 // There's only one plot in the area...
                 final PlotId plotId = PlotId.of(1, 1);
@@ -222,7 +218,7 @@ public class Area extends SubCommand {
                 hybridPlotWorld.setAllowSigns(false);
                 final File parentFile = FileUtils.getFile(
                         PlotSquared.platform().getDirectory(),
-                        "schematics" + File.separator + "GEN_ROAD_SCHEMATIC" + File.separator + hybridPlotWorld.getWorldName() + File.separator
+                        Settings.Paths.SCHEMATICS + File.separator + "GEN_ROAD_SCHEMATIC" + File.separator + hybridPlotWorld.getWorldName() + File.separator
                                 + hybridPlotWorld.getId()
                 );
                 if (!parentFile.exists() && !parentFile.mkdirs()) {
@@ -233,10 +229,9 @@ public class Area extends SubCommand {
                 try (final ClipboardWriter clipboardWriter = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(
                         file))) {
                     final BlockArrayClipboard clipboard = new BlockArrayClipboard(selectedRegion);
-                    final EditSession editSession = WorldEdit
-                            .getInstance()
-                            .getEditSessionFactory()
-                            .getEditSession(selectedRegion.getWorld(), -1);
+                    EditSessionBuilder editSessionBuilder = WorldEdit.getInstance().newEditSessionBuilder();
+                    editSessionBuilder.world(selectedRegion.getWorld());
+                    final EditSession editSession = editSessionBuilder.build();
                     final ForwardExtentCopy forwardExtentCopy =
                             new ForwardExtentCopy(editSession, selectedRegion, clipboard, selectedRegion.getMinimumPoint());
                     forwardExtentCopy.setCopyingBiomes(true);
@@ -277,9 +272,9 @@ public class Area extends SubCommand {
                     if (offsetZ != 0) {
                         this.worldConfiguration.set(path + ".road.offset.z", offsetZ);
                     }
-                    final String world = this.setupUtils.setupWorld(singleBuilder);
-                    if (this.worldUtil.isWorld(world)) {
-                        PlotSquared.get().loadWorld(world, null);
+                    final String worldName = this.setupUtils.setupWorld(singleBuilder);
+                    if (this.worldUtil.isWorld(worldName)) {
+                        PlotSquared.get().loadWorld(worldName, null);
                         player.sendMessage(TranslatableCaption.of("single.single_area_created"));
                     } else {
                         player.sendMessage(
@@ -292,7 +287,7 @@ public class Area extends SubCommand {
                 return true;
             }
             case "c", "setup", "create" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_AREA_CREATE)) {
+                if (!player.hasPermission(Permission.PERMISSION_AREA_CREATE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_AREA_CREATE))
@@ -368,7 +363,8 @@ public class Area extends SubCommand {
                                 int lower = (area.ROAD_WIDTH & 1) == 0 ? area.ROAD_WIDTH / 2 - 1 : area.ROAD_WIDTH / 2;
                                 final int offsetX = bx - (area.ROAD_WIDTH == 0 ? 0 : lower);
                                 final int offsetZ = bz - (area.ROAD_WIDTH == 0 ? 0 : lower);
-                                final CuboidRegion region = RegionUtil.createRegion(bx, tx, bz, tz);
+                                // Height doesn't matter for this region
+                                final CuboidRegion region = RegionUtil.createRegion(bx, tx, 0, 0, bz, tz);
                                 final Set<PlotArea> areas = this.plotAreaManager.getPlotAreasSet(area.getWorldName(), region);
                                 if (!areas.isEmpty()) {
                                     player.sendMessage(
@@ -578,7 +574,7 @@ public class Area extends SubCommand {
                 return true;
             }
             case "i", "info" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_AREA_INFO)) {
+                if (!player.hasPermission(Permission.PERMISSION_AREA_INFO)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_AREA_INFO))
@@ -656,7 +652,7 @@ public class Area extends SubCommand {
                 return true;
             }
             case "l", "list" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_AREA_LIST)) {
+                if (!player.hasPermission(Permission.PERMISSION_AREA_LIST)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_AREA_LIST))
@@ -739,7 +735,7 @@ public class Area extends SubCommand {
                 return true;
             }
             case "regen", "clear", "reset", "regenerate" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_AREA_REGEN)) {
+                if (!player.hasPermission(Permission.PERMISSION_AREA_REGEN)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_AREA_REGEN))
@@ -772,7 +768,7 @@ public class Area extends SubCommand {
                 return true;
             }
             case "goto", "v", "teleport", "visit", "tp" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_AREA_TP)) {
+                if (!player.hasPermission(Permission.PERMISSION_AREA_TP)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of("node", String.valueOf(Permission.PERMISSION_AREA_TP))
@@ -828,19 +824,19 @@ public class Area extends SubCommand {
     public Collection<Command> tab(final PlotPlayer<?> player, final String[] args, final boolean space) {
         if (args.length == 1) {
             final List<String> completions = new LinkedList<>();
-            if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_CREATE)) {
+            if (player.hasPermission(Permission.PERMISSION_AREA_CREATE)) {
                 completions.add("create");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_CREATE)) {
+            if (player.hasPermission(Permission.PERMISSION_AREA_CREATE)) {
                 completions.add("single");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_LIST)) {
+            if (player.hasPermission(Permission.PERMISSION_AREA_LIST)) {
                 completions.add("list");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_INFO)) {
+            if (player.hasPermission(Permission.PERMISSION_AREA_INFO)) {
                 completions.add("info");
             }
-            if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_TP)) {
+            if (player.hasPermission(Permission.PERMISSION_AREA_TP)) {
                 completions.add("tp");
             }
             final List<Command> commands = completions.stream().filter(completion -> completion
@@ -855,7 +851,7 @@ public class Area extends SubCommand {
                             CommandCategory.ADMINISTRATION
                     ) {
                     }).collect(Collectors.toCollection(LinkedList::new));
-            if (Permissions.hasPermission(player, Permission.PERMISSION_AREA) && args[0].length() > 0) {
+            if (player.hasPermission(Permission.PERMISSION_AREA) && args[0].length() > 0) {
                 commands.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
             }
             return commands;

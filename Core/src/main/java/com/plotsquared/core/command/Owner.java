@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -38,12 +31,12 @@ import com.plotsquared.core.player.PlayerMetaDataKeys;
 import com.plotsquared.core.player.PlotPlayer;
 import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.PlayerManager;
 import com.plotsquared.core.util.TabCompletions;
 import com.plotsquared.core.util.task.TaskManager;
 import net.kyori.adventure.text.minimessage.Template;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -76,6 +69,7 @@ public class Owner extends SetCommand {
             );
             return false;
         }
+        @Nullable final UUID oldOwner = plot.getOwnerAbs();
         Set<Plot> plots = plot.getConnectedPlots();
 
         final Consumer<UUID> uuidConsumer = uuid -> {
@@ -104,10 +98,10 @@ public class Owner extends SetCommand {
             uuid = event.getNewOwner();
             boolean force = event.getEventResult() == Result.FORCE;
             if (uuid == null) {
-                if (!force && !Permissions
-                        .hasPermission(player, Permission.PERMISSION_ADMIN_COMMAND_SET_OWNER,
-                                true
-                        )) {
+                if (!force && !player.hasPermission(
+                        Permission.PERMISSION_ADMIN_COMMAND_SET_OWNER,
+                        true
+                )) {
                     return;
                 }
                 PlotUnlinkEvent unlinkEvent = this.eventDispatcher.callUnlink(
@@ -124,12 +118,15 @@ public class Owner extends SetCommand {
                     );
                     return;
                 }
-                plot.getPlotModificationManager().unlinkPlot(unlinkEvent.isCreateRoad(), unlinkEvent.isCreateRoad());
+                if (plot.getPlotModificationManager().unlinkPlot(unlinkEvent.isCreateRoad(), unlinkEvent.isCreateRoad())) {
+                    eventDispatcher.callPostUnlink(plot, PlotUnlinkEvent.REASON.NEW_OWNER);
+                }
                 Set<Plot> connected = plot.getConnectedPlots();
                 for (Plot current : connected) {
                     current.unclaim();
                     current.getPlotModificationManager().removeSign();
                 }
+                eventDispatcher.callPostOwnerChange(player, plot, oldOwner);
                 player.sendMessage(TranslatableCaption.of("owner.set_owner"));
                 return;
             }
@@ -137,16 +134,15 @@ public class Owner extends SetCommand {
             if (plot.isOwner(uuid)) {
                 player.sendMessage(
                         TranslatableCaption.of("member.already_owner"),
-                        Template.of("player", PlayerManager.getName(uuid, false))
+                        Template.of("player", PlayerManager.resolveName(uuid, false).getComponent(player))
                 );
                 return;
             }
-            if (!force && !Permissions
-                    .hasPermission(player, Permission.PERMISSION_ADMIN_COMMAND_SET_OWNER)) {
+            if (!force && !player.hasPermission(Permission.PERMISSION_ADMIN_COMMAND_SET_OWNER)) {
                 if (other == null) {
                     player.sendMessage(
                             TranslatableCaption.of("errors.invalid_player_offline"),
-                            Template.of("player", PlayerManager.getName(uuid))
+                            Template.of("player", PlayerManager.resolveName(uuid).getComponent(player))
                     );
                     return;
                 }
@@ -178,6 +174,7 @@ public class Owner extends SetCommand {
                         }
                         plot.getPlotModificationManager().setSign(finalName);
                         player.sendMessage(TranslatableCaption.of("owner.set_owner"));
+                        eventDispatcher.callPostOwnerChange(player, plot, oldOwner);
                         if (other != null) {
                             other.sendMessage(
                                     TranslatableCaption.of("owner.now_owner"),

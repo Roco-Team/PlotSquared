@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.player;
 
@@ -49,14 +42,12 @@ import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.plot.PlotCluster;
 import com.plotsquared.core.plot.PlotId;
 import com.plotsquared.core.plot.PlotWeather;
-import com.plotsquared.core.plot.expiration.ExpireManager;
 import com.plotsquared.core.plot.flag.implementations.DoneFlag;
 import com.plotsquared.core.plot.world.PlotAreaManager;
 import com.plotsquared.core.plot.world.SinglePlotArea;
 import com.plotsquared.core.plot.world.SinglePlotAreaManager;
 import com.plotsquared.core.synchronization.LockRepository;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.query.PlotQuery;
 import com.plotsquared.core.util.task.RunnableVal;
 import com.plotsquared.core.util.task.TaskManager;
@@ -104,7 +95,8 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     private static final Set<PlotPlayer<?>> debugModeEnabled =
             Collections.synchronizedSet(new HashSet<>());
 
-    private static final Map<Class, PlotPlayerConverter> converters = new HashMap<>();
+    @SuppressWarnings("rawtypes")
+    private static final Map<Class<?>, PlotPlayerConverter> converters = new HashMap<>();
     private final LockRepository lockRepository = new LockRepository();
     private final PlotAreaManager plotAreaManager;
     private final EventDispatcher eventDispatcher;
@@ -128,6 +120,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
         this.permissionHandler = permissionHandler;
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static <T> PlotPlayer<T> from(final @NonNull T object) {
         // fast path
         if (converters.containsKey(object.getClass())) {
@@ -206,6 +199,20 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
         return this.permissionProfile.hasKeyedPermission(world, permission, key);
     }
 
+    @Override
+    public final boolean hasPermission(@NonNull String permission, boolean notify) {
+        if (!hasPermission(permission)) {
+            if (notify) {
+                sendMessage(
+                        TranslatableCaption.of("permission.no_permission_event"),
+                        Template.of("node", permission)
+                );
+            }
+            return false;
+        }
+        return true;
+    }
+
     public abstract Actor toActor();
 
     public abstract P getPlatformPlayer();
@@ -234,6 +241,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @param <T> the object type to return
      * @return the value assigned to the key or null if it does not exist
      */
+    @SuppressWarnings("unchecked")
     <T> T getMeta(String key) {
         if (this.meta != null) {
             return (T) this.meta.get(key);
@@ -295,7 +303,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @return number of allowed plots within the scope (globally, or in the player's current world as defined in the settings.yml)
      */
     public int getAllowedPlots() {
-        return Permissions.hasPermissionRange(this, "plots.plot", Settings.Limit.MAX_PLOTS);
+        return hasPermissionRange("plots.plot", Settings.Limit.MAX_PLOTS);
     }
 
     /**
@@ -361,7 +369,6 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     }
 
     public int getClusterCount(String world) {
-        UUID uuid = getUUID();
         int count = 0;
         for (PlotArea area : this.plotAreaManager.getPlotAreasSet(world)) {
             for (PlotCluster cluster : area.getClusters()) {
@@ -376,9 +383,12 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     /**
      * Get a {@link Set} of plots owned by this player.
      *
+     * <p>
+     * Take a look at {@link PlotSquared} for more searching functions.
+     * See {@link #getPlotCount()} for the number of plots.
+     * </p>
+     *
      * @return a {@link Set} of plots owned by the player
-     * @see PlotSquared for more searching functions
-     * @see #getPlotCount() for the number of plots
      */
     public Set<Plot> getPlots() {
         return PlotQuery.newQuery().ownedBy(this).asSet();
@@ -499,7 +509,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * Retrieves the attribute of this player.
      *
      * @param key metadata key
-     * @return the attribute will be either true or false
+     * @return the attribute will be either {@code true} or {@code false}
      */
     public boolean getAttribute(String key) {
         if (!hasPersistentMeta("attrib_" + key)) {
@@ -570,7 +580,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     /**
      * Check if this player is banned.
      *
-     * @return true if the player is banned, false otherwise.
+     * @return {@code true} if the player is banned, {@code false} otherwise.
      */
     public abstract boolean isBanned();
 
@@ -620,8 +630,8 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
                 LOGGER.info("Plot {} was deleted + cleared due to {} getting banned", owned.getId(), getName());
             }
         }
-        if (ExpireManager.IMP != null) {
-            ExpireManager.IMP.storeDate(getUUID(), System.currentTimeMillis());
+        if (PlotSquared.platform().expireManager() != null) {
+            PlotSquared.platform().expireManager().storeDate(getUUID(), System.currentTimeMillis());
         }
         PlotSquared.platform().playerManager().removePlayer(this);
         PlotSquared.platform().unregister(this);
@@ -795,16 +805,16 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
             final @NonNull MetaDataKey<T> key,
             final @NonNull T value
     ) {
-        final Object rawValue = value;
         if (key.getType().getRawType().equals(Integer.class)) {
-            this.setPersistentMeta(key.toString(), Ints.toByteArray((int) rawValue));
+            this.setPersistentMeta(key.toString(), Ints.toByteArray((int) (Object) value));
         } else if (key.getType().getRawType().equals(Boolean.class)) {
-            this.setPersistentMeta(key.toString(), ByteArrayUtilities.booleanToBytes((boolean) rawValue));
+            this.setPersistentMeta(key.toString(), ByteArrayUtilities.booleanToBytes((boolean) (Object) value));
         } else {
             throw new IllegalArgumentException(String.format("Unknown meta data type '%s'", key.getType()));
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Nullable <T> T getPersistentMeta(final @NonNull MetaDataKey<T> key) {
         final byte[] value = this.getPersistentMeta(key.toString());
         if (value == null) {
@@ -1017,6 +1027,14 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     public @NonNull LockRepository getLockRepository() {
         return this.lockRepository;
     }
+
+    /**
+     * Removes any effects present of the given type.
+     *
+     * @param name the name of the type to remove
+     * @since 6.10.0
+     */
+    public abstract void removeEffect(@NonNull String name);
 
     @FunctionalInterface
     public interface PlotPlayerConverter<BaseObject> {

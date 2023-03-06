@@ -1,7 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
-import org.cadixdev.gradle.licenser.LicenseExtension
-import org.cadixdev.gradle.licenser.Licenser
 import java.net.URI
+import com.diffplug.gradle.spotless.SpotlessPlugin
 
 plugins {
     java
@@ -10,7 +9,7 @@ plugins {
     signing
 
     alias(libs.plugins.shadow)
-    alias(libs.plugins.licenser)
+    alias(libs.plugins.spotless)
     alias(libs.plugins.grgit)
     alias(libs.plugins.nexus)
 
@@ -18,10 +17,21 @@ plugins {
     idea
 }
 
-version = "6.1.3-SNAPSHOT"
+group = "com.plotsquared"
+version = "6.11.2-SNAPSHOT"
 
-allprojects {
-    group = "com.plotsquared"
+if (!File("$rootDir/.git").exists()) {
+    logger.lifecycle("""
+    **************************************************************************************
+    You need to fork and clone this repository! Don't download a .zip file.
+    If you need assistance, consult the GitHub docs: https://docs.github.com/get-started/quickstart/fork-a-repo
+    **************************************************************************************
+    """.trimIndent()
+    ).also { kotlin.system.exitProcess(1) }
+}
+
+subprojects {
+    group = rootProject.group
     version = rootProject.version
 
     repositories {
@@ -33,13 +43,16 @@ allprojects {
         }
 
         maven {
-            name = "Jitpack"
-            url = uri("https://jitpack.io")
+            name = "Sonatype OSS (S01)"
+            url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
         }
 
         maven {
-            name = "IntellectualSites"
-            url = uri("https://mvn.intellectualsites.com/content/groups/public/")
+            name = "Jitpack"
+            url = uri("https://jitpack.io")
+            content {
+                includeModule("com.github.MilkBowl", "VaultAPI")
+            }
         }
 
         maven {
@@ -47,40 +60,50 @@ allprojects {
             url = uri("https://maven.enginehub.org/repo/")
         }
     }
-}
 
-subprojects {
     apply {
         plugin<JavaPlugin>()
         plugin<JavaLibraryPlugin>()
         plugin<MavenPublishPlugin>()
         plugin<ShadowPlugin>()
-        plugin<Licenser>()
+        plugin<SpotlessPlugin>()
         plugin<SigningPlugin>()
 
         plugin<EclipsePlugin>()
         plugin<IdeaPlugin>()
     }
-}
 
-val javadocDir = rootDir.resolve("docs").resolve("javadoc").resolve(project.name)
-allprojects {
+    dependencies {
+        implementation(platform("com.intellectualsites.bom:bom-1.18.x:1.24"))
+    }
+
     dependencies {
         // Tests
-        testImplementation("junit:junit:4.13.2")
-        testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+        testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
     }
 
     plugins.withId("java") {
         the<JavaPluginExtension>().toolchain {
-            languageVersion.set(JavaLanguageVersion.of(16))
+            languageVersion.set(JavaLanguageVersion.of(17))
         }
     }
 
-    configure<LicenseExtension> {
-        header(rootProject.file("HEADER.txt"))
-        include("**/*.java")
-        newLine.set(false)
+    tasks.compileJava.configure {
+        options.release.set(17)
+    }
+
+    configurations.all {
+        attributes.attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 17)
+    }
+
+    spotless {
+        java {
+            licenseHeaderFile(rootProject.file("HEADER.txt"))
+            target("**/*.java")
+            endWithNewline()
+            trimTrailingWhitespace()
+            removeUnusedImports()
+        }
     }
 
     java {
@@ -111,7 +134,7 @@ allprojects {
                 pom {
 
                     name.set(project.name + " " + project.version)
-                    description.set("PlotSquared is a land and world management plugin for Minecraft.")
+                    description.set("PlotSquared, a land and world management plugin for Minecraft.")
                     url.set("https://github.com/IntellectualSites/PlotSquared")
 
                     licenses {
@@ -130,9 +153,9 @@ allprojects {
                         }
                         developer {
                             id.set("NotMyFault")
-                            name.set("NotMyFault")
+                            name.set("Alexander Brandes")
                             organization.set("IntellectualSites")
-                            email.set("contact@notmyfault.dev")
+                            email.set("contact(at)notmyfault.dev")
                         }
                         developer {
                             id.set("SirYwell")
@@ -152,7 +175,7 @@ allprojects {
                         developerConnection.set("scm:git://github.com/IntellectualSites/PlotSquared.git")
                     }
 
-                    issueManagement{
+                    issueManagement {
                         system.set("GitHub")
                         url.set("https://github.com/IntellectualSites/PlotSquared/issues")
                     }
@@ -162,35 +185,16 @@ allprojects {
     }
 
     tasks {
-        named<Delete>("clean") {
-            doFirst {
-                javadocDir.deleteRecursively()
-            }
-        }
 
         compileJava {
-            options.compilerArgs.addAll(arrayOf("-Xmaxerrs", "1000"))
-            options.compilerArgs.add("-Xlint:all")
-            for (disabledLint in arrayOf("processing", "path", "fallthrough", "serial"))
-                options.compilerArgs.add("-Xlint:$disabledLint")
+            options.compilerArgs.add("-parameters")
             options.isDeprecation = true
             options.encoding = "UTF-8"
-        }
-
-        javadoc {
-            val opt = options as StandardJavadocDocletOptions
-            opt.addStringOption("Xdoclint:none", "-quiet")
-            opt.tags(
-                    "apiNote:a:API Note:",
-                    "implSpec:a:Implementation Requirements:",
-                    "implNote:a:Implementation Note:"
-            )
         }
 
         shadowJar {
             this.archiveClassifier.set(null as String?)
             this.archiveFileName.set("${project.name}-${project.version}.${this.archiveExtension.getOrElse("jar")}")
-            this.destinationDirectory.set(rootProject.tasks.shadowJar.get().destinationDirectory.get())
         }
 
         named("build") {
@@ -200,7 +204,6 @@ allprojects {
             useJUnitPlatform()
         }
     }
-
 }
 
 nexusPublishing {
@@ -212,36 +215,6 @@ nexusPublishing {
     }
 }
 
-tasks {
-    val aggregatedJavadocs = create<Javadoc>("aggregatedJavadocs") {
-        title = "${project.name} ${project.version} API"
-        setDestinationDir(javadocDir)
-        options.destinationDirectory = javadocDir
-
-        doFirst {
-            javadocDir.deleteRecursively()
-        }
-    }.also {
-        it.group = "Documentation"
-        it.description = "Generate javadocs from all child projects as if it was a single project"
-    }
-
-    subprojects.forEach { subProject ->
-        subProject.afterEvaluate {
-            subProject.tasks.withType<Javadoc>().forEach { task ->
-                aggregatedJavadocs.source += task.source
-                aggregatedJavadocs.classpath += task.classpath
-                aggregatedJavadocs.excludes += task.excludes
-                aggregatedJavadocs.includes += task.includes
-
-                val rootOptions = aggregatedJavadocs.options as StandardJavadocDocletOptions
-                val subOptions = task.options as StandardJavadocDocletOptions
-                rootOptions.links(*subOptions.links.orEmpty().minus(rootOptions.links.orEmpty()).toTypedArray())
-            }
-        }
-    }
-
-    build {
-        dependsOn(aggregatedJavadocs)
-    }
+tasks.getByName<Jar>("jar") {
+    enabled = false
 }

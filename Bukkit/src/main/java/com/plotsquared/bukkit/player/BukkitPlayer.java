@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.bukkit.player;
 
@@ -54,13 +47,13 @@ import org.bukkit.event.EventException;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.RegisteredListener;
+import org.bukkit.potion.PotionEffectType;
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static com.sk89q.worldedit.world.gamemode.GameModes.ADVENTURE;
 import static com.sk89q.worldedit.world.gamemode.GameModes.CREATIVE;
@@ -74,14 +67,15 @@ public class BukkitPlayer extends PlotPlayer<Player> {
     private String name;
 
     /**
-     * <p>Please do not use this method. Instead use
-     * BukkitUtil.getPlayer(Player), as it caches player objects.</p>
-     *
      * @param plotAreaManager   PlotAreaManager instance
      * @param eventDispatcher   EventDispatcher instance
      * @param player            Bukkit player instance
      * @param permissionHandler PermissionHandler instance
+     *
+     * @deprecated Please do not use this method. Instead use {@link BukkitUtil#adapt(Player)}, as it caches player objects.
+     * This method will be made private in a future release.
      */
+    @Deprecated(forRemoval = true, since = "6.10.9")
     public BukkitPlayer(
             final @NonNull PlotAreaManager plotAreaManager, final @NonNull EventDispatcher eventDispatcher,
             final @NonNull Player player, final @NonNull PermissionHandler permissionHandler
@@ -89,6 +83,16 @@ public class BukkitPlayer extends PlotPlayer<Player> {
         this(plotAreaManager, eventDispatcher, player, false, permissionHandler);
     }
 
+    /**
+     * @param plotAreaManager   PlotAreaManager instance
+     * @param eventDispatcher   EventDispatcher instance
+     * @param player            Bukkit player instance
+     * @param permissionHandler PermissionHandler instance
+     *
+     * @deprecated Please do not use this method. Instead use {@link BukkitUtil#adapt(Player)}, as it caches player objects.
+     * This method will be made private in a future release.
+     */
+    @Deprecated(forRemoval = true, since = "6.10.9")
     public BukkitPlayer(
             final @NonNull PlotAreaManager plotAreaManager, final @NonNull
             EventDispatcher eventDispatcher, final @NonNull Player player,
@@ -162,6 +166,7 @@ public class BukkitPlayer extends PlotPlayer<Player> {
         }
     }
 
+    @SuppressWarnings("StringSplitter")
     @Override
     @NonNegative
     public int hasPermissionRange(
@@ -319,7 +324,7 @@ public class BukkitPlayer extends PlotPlayer<Player> {
         if (id == ItemTypes.AIR) {
             // Let's just stop all the discs because why not?
             for (final Sound sound : Arrays.stream(Sound.values())
-                    .filter(sound -> sound.name().contains("DISC")).collect(Collectors.toList())) {
+                    .filter(sound -> sound.name().contains("DISC")).toList()) {
                 player.stopSound(sound);
             }
             // this.player.playEffect(BukkitUtil.getLocation(location), Effect.RECORD_PLAY, Material.AIR);
@@ -331,6 +336,7 @@ public class BukkitPlayer extends PlotPlayer<Player> {
         }
     }
 
+    @SuppressWarnings("deprecation") // Needed for Spigot compatibility
     @Override
     public void kick(final String message) {
         this.player.kickPlayer(message);
@@ -351,6 +357,14 @@ public class BukkitPlayer extends PlotPlayer<Player> {
     @Override
     public @NonNull Audience getAudience() {
         return BukkitUtil.BUKKIT_AUDIENCES.player(this.player);
+    }
+
+    @Override
+    public void removeEffect(@NonNull String name) {
+        PotionEffectType type = PotionEffectType.getByName(name);
+        if (type != null) {
+            player.removePotionEffect(type);
+        }
     }
 
     @Override

@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.database;
 
@@ -101,7 +94,9 @@ public class SQLManager implements AbstractDB {
     private final String prefix;
     private final Database database;
     private final boolean mySQL;
+    @SuppressWarnings({"unused", "FieldCanBeLocal"})
     private final EventDispatcher eventDispatcher;
+    @SuppressWarnings({"unused", "FieldCanBeLocal"})
     private final PlotListener plotListener;
     private final YamlConfiguration worldConfiguration;
     /**
@@ -408,7 +403,6 @@ public class SQLManager implements AbstractDB {
                 while (iterator.hasNext()) {
                     try {
                         Entry<Plot, Queue<UniqueStatement>> entry = iterator.next();
-                        Plot plot = entry.getKey();
                         Queue<UniqueStatement> tasks = entry.getValue();
                         if (tasks.isEmpty()) {
                             iterator.remove();
@@ -2099,6 +2093,7 @@ public class SQLManager implements AbstractDB {
                                 case "default":
                                 case "0,0,0":
                                 case "center":
+                                case "centre":
                                     break;
                                 default:
                                     try {
@@ -2294,8 +2289,6 @@ public class SQLManager implements AbstractDB {
                     int size = uniqueIdsList.size();
                     int packet = 990;
                     int amount = size / packet;
-                    int count = 0;
-                    int last = -1;
                     for (int j = 0; j <= amount; j++) {
                         List<Integer> subList =
                                 uniqueIdsList.subList(j * packet, Math.min(size, (j + 1) * packet));
@@ -2946,6 +2939,7 @@ public class SQLManager implements AbstractDB {
                             case "default":
                             case "0,0,0":
                             case "center":
+                            case "centre":
                                 break;
                             default:
                                 try {
@@ -3198,6 +3192,7 @@ public class SQLManager implements AbstractDB {
         return true;
     }
 
+    @SuppressWarnings({"unchecked", "unused"})
     @Override
     public void validateAllPlots(Set<Plot> toValidate) {
         if (!isValid()) {
@@ -3453,15 +3448,7 @@ public class SQLManager implements AbstractDB {
 
     }
 
-    private static class UUIDPair {
-
-        public final int id;
-        public final UUID uuid;
-
-        public UUIDPair(int id, UUID uuid) {
-            this.id = id;
-            this.uuid = uuid;
-        }
+    private record UUIDPair(int id, UUID uuid) {
 
     }
 

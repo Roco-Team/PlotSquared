@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.util;
 
@@ -90,7 +83,7 @@ public final class BlockUtil {
         if (id.length() == 1 && id.charAt(0) == '*') {
             return FuzzyBlockState.builder().type(BlockTypes.AIR).build();
         }
-        String mutableId = id;
+        String mutableId;
         mutableId = id.toLowerCase();
         BlockType type = BlockTypes.get(mutableId);
         if (type != null) {
@@ -121,7 +114,9 @@ public final class BlockUtil {
      *
      * @param commaDelimited List of block states
      * @return Parsed block states
+     * @deprecated Unused internally. Scheduled for removal in next major release.
      */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static @NonNull BlockState[] parse(final @NonNull String commaDelimited) {
         final String[] split = commaDelimited.split(",(?![^\\(\\[]*[\\]\\)])");
         final BlockState[] result = new BlockState[split.length];
@@ -137,7 +132,9 @@ public final class BlockUtil {
      * @param map Serialized block state
      * @return Deserialized block state, or {@code null} if the map is
      *         not a properly serialized block state
+     * @deprecated Unused internally. Scheduled for removal in next major release.
      */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static @Nullable BlockState deserialize(final @NonNull Map<String, Object> map) {
         if (map.containsKey("material")) {
             final Object object = map.get("material");

@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.bukkit.util;
 
@@ -47,7 +40,6 @@ import com.plotsquared.core.plot.flag.implementations.PvpFlag;
 import com.plotsquared.core.plot.flag.implementations.TamedAttackFlag;
 import com.plotsquared.core.plot.flag.implementations.VehicleCapFlag;
 import com.plotsquared.core.util.EntityUtil;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.entity.EntityCategories;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import net.kyori.adventure.text.minimessage.Template;
@@ -175,18 +167,16 @@ public class BukkitEntityUtil {
                 if (plot != null && (plot.getFlag(HangingBreakFlag.class) || plot
                         .isAdded(plotPlayer.getUUID()))) {
                     if (Settings.Done.RESTRICT_BUILDING && DoneFlag.isDone(plot)) {
-                        if (!Permissions
-                                .hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_BUILD_OTHER)) {
+                        if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_BUILD_OTHER)) {
                             plotPlayer.sendMessage(
-                                    TranslatableCaption.of("permission.no_permission_event"),
-                                    Template.of("node", String.valueOf(Permission.PERMISSION_ADMIN_BUILD_OTHER))
+                                    TranslatableCaption.of("done.building_restricted")
                             );
                             return false;
                         }
                     }
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_DESTROY + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_DESTROY + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_DESTROY + "." + stub)
@@ -198,7 +188,7 @@ public class BukkitEntityUtil {
                         .isAdded(plotPlayer.getUUID()))) {
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_DESTROY + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_DESTROY + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_DESTROY + "." + stub)
@@ -219,7 +209,7 @@ public class BukkitEntityUtil {
                         .getFlag(PveFlag.class))) {
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_PVE + "." + stub)
@@ -240,7 +230,7 @@ public class BukkitEntityUtil {
                         .getFlag(PveFlag.class))) {
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_PVE + "." + stub)
@@ -253,8 +243,7 @@ public class BukkitEntityUtil {
                 }
             } else if (EntityCategories.PLAYER.contains(entityType)) {
                 if (isPlot) {
-                    if (!plot.getFlag(PvpFlag.class) && !Permissions
-                            .hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_PVP + "." + stub)) {
+                    if (!plot.getFlag(PvpFlag.class) && !plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_PVP + "." + stub)) {
                         plotPlayer.sendMessage(
                                 TranslatableCaption.of("permission.no_permission_event"),
                                 Template.of("node", Permission.PERMISSION_ADMIN_PVP + "." + stub)
@@ -268,7 +257,7 @@ public class BukkitEntityUtil {
                 } else if (roadFlags && area.getRoadFlag(PvpFlag.class)) {
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_PVP + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_PVP + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_PVP + "." + stub)
@@ -285,7 +274,7 @@ public class BukkitEntityUtil {
                         .getFlag(PveFlag.class))) {
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_PVE + "." + stub)
@@ -307,7 +296,7 @@ public class BukkitEntityUtil {
                 } else if (roadFlags && area.getRoadFlag(PveFlag.class)) {
                     return true;
                 }
-                if (!Permissions.hasPermission(plotPlayer, Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
+                if (!plotPlayer.hasPermission(Permission.PERMISSION_ADMIN_PVE + "." + stub)) {
                     plotPlayer.sendMessage(
                             TranslatableCaption.of("permission.no_permission_event"),
                             Template.of("node", Permission.PERMISSION_ADMIN_PVE + "." + stub)

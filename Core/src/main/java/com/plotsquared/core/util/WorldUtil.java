@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.util;
 
@@ -39,6 +32,7 @@ import com.sk89q.jnbt.Tag;
 import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.biome.BiomeType;
 import com.sk89q.worldedit.world.block.BlockState;
 import com.sk89q.worldedit.world.block.BlockType;
@@ -78,11 +72,26 @@ public abstract class WorldUtil {
      * @param p2x   Max X
      * @param p2z   Max Z
      * @param biome Biome
+     * @deprecated use {@link WorldUtil#setBiome(String, CuboidRegion, BiomeType)}
      */
+    @Deprecated(forRemoval = true)
     public static void setBiome(String world, int p1x, int p1z, int p2x, int p2z, BiomeType biome) {
-        BlockVector3 pos1 = BlockVector2.at(p1x, p1z).toBlockVector3();
-        BlockVector3 pos2 = BlockVector2.at(p2x, p2z).toBlockVector3(Plot.MAX_HEIGHT - 1);
+        World weWorld = PlotSquared.platform().worldUtil().getWeWorld(world);
+        BlockVector3 pos1 = BlockVector2.at(p1x, p1z).toBlockVector3(weWorld.getMinY());
+        BlockVector3 pos2 = BlockVector2.at(p2x, p2z).toBlockVector3(weWorld.getMaxY());
         CuboidRegion region = new CuboidRegion(pos1, pos2);
+        PlotSquared.platform().worldUtil().setBiomes(world, region, biome);
+    }
+
+    /**
+     * Set the biome in a region
+     *
+     * @param world  World name
+     * @param region Region
+     * @param biome  Biome
+     * @since 6.6.0
+     */
+    public static void setBiome(String world, final CuboidRegion region, BiomeType biome) {
         PlotSquared.platform().worldUtil().setBiomes(world, region, biome);
     }
 
@@ -217,11 +226,14 @@ public abstract class WorldUtil {
     /**
      * Set the biome in a region
      *
-     * @param world  World name
-     * @param region Region
-     * @param biome  New biome
+     * @param worldName World name
+     * @param region    Region
+     * @param biome     New biome
      */
-    public abstract void setBiomes(@NonNull String world, @NonNull CuboidRegion region, @NonNull BiomeType biome);
+    public void setBiomes(@NonNull String worldName, @NonNull CuboidRegion region, @NonNull BiomeType biome) {
+        final World world = getWeWorld(worldName);
+        region.forEach(bv -> world.setBiome(bv, biome));
+    }
 
     /**
      * Get the WorldEdit {@link com.sk89q.worldedit.world.World} corresponding to a world name
@@ -240,6 +252,10 @@ public abstract class WorldUtil {
      */
     public abstract void refreshChunk(int x, int z, String world);
 
+    /**
+     * The legacy web interface is deprecated for removal in favor of Arkitektonika.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.0")
     public void upload(
             final @NonNull Plot plot,
             final @Nullable UUID uuid,

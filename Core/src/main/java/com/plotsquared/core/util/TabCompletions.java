@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.util;
 
@@ -38,7 +31,6 @@ import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.uuid.UUIDMapping;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -84,7 +76,7 @@ public final class TabCompletions {
      * @return List of completions
      * @deprecated In favor {@link #completePlayers(PlotPlayer, String, List)}
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = true, since = "6.1.3")
     public static @NonNull List<Command> completePlayers(
             final @NonNull String input,
             final @NonNull List<String> existing
@@ -100,6 +92,7 @@ public final class TabCompletions {
      * @param issuer   The player who issued the tab completion
      * @param existing Players that should not be included in completions
      * @return List of completions
+     * @since 6.1.3
      */
     public static @NonNull List<Command> completePlayers(
             final @NonNull PlotPlayer<?> issuer,
@@ -119,7 +112,7 @@ public final class TabCompletions {
      *
      * @deprecated In favor {@link #completeAddedPlayers(PlotPlayer, Plot, String, List)}
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = true, since = "6.1.3")
     public static @NonNull List<Command> completeAddedPlayers(
             final @NonNull Plot plot,
             final @NonNull String input, final @NonNull List<String> existing
@@ -135,6 +128,7 @@ public final class TabCompletions {
      * @param input    Command input
      * @param existing Players that should not be included in completions
      * @return List of completions
+     * @since 6.1.3
      */
     public static @NonNull List<Command> completeAddedPlayers(
             final @NonNull PlotPlayer<?> issuer,
@@ -165,7 +159,7 @@ public final class TabCompletions {
     }
 
     /**
-     * Get a list of completions corresponding to WorldEdit(/FAWE) patterns. This uses
+     * Get a list of completions corresponding to WorldEdit(/FastAsyncWorldEdit) patterns. This uses
      * WorldEdit's pattern completer internally.
      *
      * @param input Command input
@@ -265,7 +259,8 @@ public final class TabCompletions {
      * @return List of completions
      * @deprecated In favor {@link #completePlayers(String, PlotPlayer, String, List, Predicate)}
      */
-    @Deprecated(forRemoval = true)
+    @SuppressWarnings("unused")
+    @Deprecated(forRemoval = true, since = "6.1.3")
     private static List<Command> completePlayers(
             final @NonNull String cacheIdentifier,
             final @NonNull String input, final @NonNull List<String> existing,
@@ -281,6 +276,7 @@ public final class TabCompletions {
      * @param existing        Players that should not be included in completions
      * @param uuidFilter      Filter applied before caching values
      * @return List of completions
+     * @since 6.1.3
      */
     private static List<Command> completePlayers(
             final @NonNull String cacheIdentifier,

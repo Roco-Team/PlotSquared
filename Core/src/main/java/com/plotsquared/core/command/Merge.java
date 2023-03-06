@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -39,7 +32,6 @@ import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.util.EconHandler;
 import com.plotsquared.core.util.EventDispatcher;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.PlotExpression;
 import com.plotsquared.core.util.StringMan;
 import net.kyori.adventure.text.minimessage.Template;
@@ -131,7 +123,7 @@ public class Merge extends SubCommand {
             return false;
         }
         final int size = plot.getConnectedPlots().size();
-        int max = Permissions.hasPermissionRange(player, "plots.merge", Settings.Limit.MAX_PLOTS);
+        int max = player.hasPermissionRange("plots.merge", Settings.Limit.MAX_PLOTS);
         PlotMergeEvent event =
                 this.eventDispatcher.callMerge(plot, direction, max, player);
         if (event.getEventResult() == Result.DENY) {
@@ -159,7 +151,7 @@ public class Merge extends SubCommand {
         UUID uuid = player.getUUID();
 
         if (!force && !plot.isOwner(uuid)) {
-            if (!Permissions.hasPermission(player, Permission.PERMISSION_ADMIN_COMMAND_MERGE)) {
+            if (!player.hasPermission(Permission.PERMISSION_ADMIN_COMMAND_MERGE)) {
                 player.sendMessage(TranslatableCaption.of("permission.no_plot_perms"));
                 return false;
             } else {
@@ -171,8 +163,7 @@ public class Merge extends SubCommand {
             if (args.length == 2) {
                 terrain = "true".equalsIgnoreCase(args[1]);
             }
-            if (!force && !terrain && !Permissions
-                    .hasPermission(player, Permission.PERMISSION_MERGE_KEEP_ROAD)) {
+            if (!force && !terrain && !player.hasPermission(Permission.PERMISSION_MERGE_KEEP_ROAD)) {
                 player.sendMessage(
                         TranslatableCaption.of("permission.no_permission"),
                         Template.of("node", String.valueOf(Permission.PERMISSION_MERGE_KEEP_ROAD))
@@ -189,6 +180,7 @@ public class Merge extends SubCommand {
                     );
                 }
                 player.sendMessage(TranslatableCaption.of("merge.success_merge"));
+                eventDispatcher.callPostMerge(player, plot);
                 return true;
             }
             player.sendMessage(TranslatableCaption.of("merge.no_available_automerge"));
@@ -208,8 +200,7 @@ public class Merge extends SubCommand {
         } else {
             terrain = true;
         }
-        if (!force && !terrain && !Permissions
-                .hasPermission(player, Permission.PERMISSION_MERGE_KEEP_ROAD)) {
+        if (!force && !terrain && !player.hasPermission(Permission.PERMISSION_MERGE_KEEP_ROAD)) {
             player.sendMessage(
                     TranslatableCaption.of("permission.no_permission"),
                     Template.of("node", String.valueOf(Permission.PERMISSION_MERGE_KEEP_ROAD))
@@ -225,6 +216,7 @@ public class Merge extends SubCommand {
                 );
             }
             player.sendMessage(TranslatableCaption.of("merge.success_merge"));
+            eventDispatcher.callPostMerge(player, plot);
             return true;
         }
         Plot adjacent = plot.getRelative(direction);
@@ -233,7 +225,7 @@ public class Merge extends SubCommand {
             player.sendMessage(TranslatableCaption.of("merge.no_available_automerge"));
             return false;
         }
-        if (!force && !Permissions.hasPermission(player, Permission.PERMISSION_MERGE_OTHER)) {
+        if (!force && !player.hasPermission(Permission.PERMISSION_MERGE_OTHER)) {
             player.sendMessage(
                     TranslatableCaption.of("permission.no_permission"),
                     Template.of("node", String.valueOf(Permission.PERMISSION_MERGE_OTHER))
@@ -272,6 +264,7 @@ public class Merge extends SubCommand {
                     );
                 }
                 player.sendMessage(TranslatableCaption.of("merge.success_merge"));
+                eventDispatcher.callPostMerge(player, plot);
             };
             if (!force && hasConfirmation(player)) {
                 CmdConfirm.addPending(accepter, MINI_MESSAGE.serialize(MINI_MESSAGE
@@ -286,7 +279,34 @@ public class Merge extends SubCommand {
                 run.run();
             }
         }
-        if (!force && !isOnline) {
+        if (force || !isOnline) {
+            if (force || player.hasPermission(Permission.PERMISSION_ADMIN_COMMAND_MERGE_OTHER_OFFLINE)) {
+                if (plot.getPlotModificationManager().autoMerge(
+                        direction,
+                        maxSize - size,
+                        uuids.iterator().next(),
+                        player,
+                        terrain
+                )) {
+                    if (this.econHandler.isEnabled(plotArea) && price > 0d) {
+                        if (!force && this.econHandler.getMoney(player) < price) {
+                            player.sendMessage(
+                                    TranslatableCaption.of("economy.cannot_afford_merge"),
+                                    Template.of("money", this.econHandler.format(price))
+                            );
+                            return false;
+                        }
+                        this.econHandler.withdrawMoney(player, price);
+                        player.sendMessage(
+                                TranslatableCaption.of("economy.removed_balance"),
+                                Template.of("money", this.econHandler.format(price))
+                        );
+                    }
+                    player.sendMessage(TranslatableCaption.of("merge.success_merge"));
+                    eventDispatcher.callPostMerge(player, plot);
+                    return true;
+                }
+            }
             player.sendMessage(TranslatableCaption.of("merge.no_available_automerge"));
             return false;
         }

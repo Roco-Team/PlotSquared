@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.configuration;
 
@@ -57,7 +50,10 @@ public class Config {
      * @param root configuration class
      * @param <T>  value type
      * @return value
+     * @deprecated Unused internally. Scheduled for removal in next major release.
      */
+    @Deprecated(forRemoval = true, since = "6.11.1")
+    @SuppressWarnings("unchecked")
     public static <T> T get(String key, Class<?> root) {
         String[] split = key.split("\\.");
         Object instance = getInstance(split, root);
@@ -183,6 +179,7 @@ public class Config {
         return value != null ? value.toString() : "null";
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static void save(PrintWriter writer, Class<?> clazz, Object instance, int indent) {
         try {
             String lineSeparator = System.lineSeparator();
@@ -259,21 +256,6 @@ public class Config {
     }
 
     /**
-     * Get the field for a specific config node.
-     *
-     * @param split the node (split by period)
-     * @param root
-     * @return
-     */
-    private static Field getField(String[] split, Class<?> root) {
-        Object instance = getInstance(split, root);
-        if (instance == null) {
-            return null;
-        }
-        return getField(split, instance);
-    }
-
-    /**
      * Get the field for a specific config node and instance<br>
      * Note: As expiry can have multiple blocks there will be multiple instances
      *
@@ -305,6 +287,7 @@ public class Config {
      * @param root
      * @return The instance or null
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static Object getInstance(String[] split, Class<?> root) {
         try {
             Class<?> clazz = root == null ? MethodHandles.lookup().lookupClass() : root;
@@ -464,6 +447,10 @@ public class Config {
             return INSTANCES.values();
         }
 
+        /**
+         * @deprecated Unused internally. Scheduled for removal in next major release.
+         */
+        @Deprecated(forRemoval = true, since = "6.11.1")
         public Collection<String> getSections() {
             return INSTANCES.keySet();
         }

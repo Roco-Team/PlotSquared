@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.bukkit.util.fawe;
 
@@ -36,7 +29,7 @@ import com.plotsquared.core.util.SchematicHandler;
 import com.plotsquared.core.util.WorldUtil;
 import com.plotsquared.core.util.task.RunnableVal;
 import com.sk89q.jnbt.CompoundTag;
-import org.jetbrains.annotations.NotNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -47,7 +40,7 @@ public class FaweSchematicHandler extends SchematicHandler {
     private final FaweDelegateSchematicHandler delegate = new FaweDelegateSchematicHandler();
 
     @Inject
-    public FaweSchematicHandler(@NotNull WorldUtil worldUtil, @NotNull ProgressSubscriberFactory subscriberFactory) {
+    public FaweSchematicHandler(WorldUtil worldUtil, ProgressSubscriberFactory subscriberFactory) {
         super(worldUtil, subscriberFactory);
     }
 
@@ -67,7 +60,7 @@ public class FaweSchematicHandler extends SchematicHandler {
             final PlotPlayer<?> actor,
             final RunnableVal<Boolean> whenDone
     ) {
-        delegate.paste(schematic, plot, xOffset, yOffset, zOffset, autoHeight, whenDone);
+        delegate.paste(schematic, plot, xOffset, yOffset, zOffset, autoHeight, actor, whenDone);
     }
 
     @Override
@@ -75,15 +68,15 @@ public class FaweSchematicHandler extends SchematicHandler {
         return delegate.save(tag, path);
     }
 
+    @SuppressWarnings("removal") // Just the override
     @Override
     public void upload(final CompoundTag tag, final UUID uuid, final String file, final RunnableVal<URL> whenDone) {
         delegate.upload(tag, uuid, file, whenDone);
     }
 
     @Override
-    public Schematic getSchematic(@NotNull InputStream is) {
+    public Schematic getSchematic(@NonNull InputStream is) {
         return delegate.getSchematic(is);
     }
 
 }
-

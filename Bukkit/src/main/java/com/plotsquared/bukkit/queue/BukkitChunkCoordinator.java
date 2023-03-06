@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.bukkit.queue;
 
@@ -74,11 +67,13 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
     private final Consumer<Throwable> throwableConsumer;
     private final boolean unloadAfter;
     private final int totalSize;
-
     private final AtomicInteger expectedSize;
+    private final AtomicInteger loadingChunks = new AtomicInteger();
+    private final boolean forceSync;
+
     private int batchSize;
     private PlotSquaredTask task;
-    private boolean shouldCancel;
+    private volatile boolean shouldCancel;
     private boolean finished;
 
     @Inject
@@ -90,8 +85,9 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
             @Assisted final @NonNull Collection<BlockVector2> requestedChunks,
             @Assisted final @NonNull Runnable whenDone,
             @Assisted final @NonNull Consumer<Throwable> throwableConsumer,
-            @Assisted final boolean unloadAfter,
-            @Assisted final @NonNull Collection<ProgressSubscriber> progressSubscribers
+            @Assisted("unloadAfter") final boolean unloadAfter,
+            @Assisted final @NonNull Collection<ProgressSubscriber> progressSubscribers,
+            @Assisted("forceSync") final boolean forceSync
     ) {
         this.requestedChunks = new LinkedBlockingQueue<>(requestedChunks);
         this.availableChunks = new LinkedBlockingQueue<>();
@@ -106,14 +102,27 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
         this.plugin = JavaPlugin.getPlugin(BukkitPlatform.class);
         this.bukkitWorld = Bukkit.getWorld(world.getName());
         this.progressSubscribers.addAll(progressSubscribers);
+        this.forceSync = forceSync;
     }
 
     @Override
     public void start() {
-        // Request initial batch
-        this.requestBatch();
-        // Wait until next tick to give the chunks a chance to be loaded
-        TaskManager.runTaskLater(() -> task = TaskManager.runTaskRepeat(this, TaskTime.ticks(1)), TaskTime.ticks(1));
+        if (!forceSync) {
+            // Request initial batch
+            this.requestBatch();
+            // Wait until next tick to give the chunks a chance to be loaded
+            TaskManager.runTaskLater(() -> task = TaskManager.runTaskRepeat(this, TaskTime.ticks(1)), TaskTime.ticks(1));
+        } else {
+            try {
+                while (!shouldCancel && !requestedChunks.isEmpty()) {
+                    chunkConsumer.accept(requestedChunks.poll());
+                }
+            } catch (Throwable t) {
+                throwableConsumer.accept(t);
+            } finally {
+                finish();
+            }
+        }
     }
 
     @Override
@@ -130,7 +139,9 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
             for (final ProgressSubscriber subscriber : this.progressSubscribers) {
                 subscriber.notifyEnd();
             }
-            task.cancel();
+            if (task != null) {
+                task.cancel();
+            }
             finished = true;
         }
     }
@@ -150,6 +161,13 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
 
         Chunk chunk = this.availableChunks.poll();
         if (chunk == null) {
+            if (this.availableChunks.isEmpty()) {
+                if (this.requestedChunks.isEmpty() && loadingChunks.get() == 0) {
+                    finish();
+                } else {
+                    requestBatch();
+                }
+            }
             return;
         }
         long[] iterationTime = new long[2];
@@ -197,9 +215,11 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
         BlockVector2 chunk;
         for (int i = 0; i < this.batchSize && (chunk = this.requestedChunks.poll()) != null; i++) {
             // This required PaperLib to be bumped to version 1.0.4 to mark the request as urgent
+            loadingChunks.incrementAndGet();
             PaperLib
                     .getChunkAtAsync(this.bukkitWorld, chunk.getX(), chunk.getZ(), true, true)
                     .whenComplete((chunkObject, throwable) -> {
+                        loadingChunks.decrementAndGet();
                         if (throwable != null) {
                             throwable.printStackTrace();
                             // We want one less because this couldn't be processed
@@ -219,9 +239,11 @@ public final class BukkitChunkCoordinator extends ChunkCoordinator {
      * server's main thread.
      */
     private void processChunk(final @NonNull Chunk chunk) {
+        /* Chunk#isLoaded does not necessarily return true shortly after PaperLib#getChunkAtAsync completes, but the chunk is
+        still loaded.
         if (!chunk.isLoaded()) {
-            throw new IllegalArgumentException(String.format("Chunk %d;%d is is not loaded", chunk.getX(), chunk.getZ()));
-        }
+            throw new IllegalArgumentException(String.format("Chunk %d;%d is is not loaded", chunk.getX(), chunk.getZ());
+        }*/
         if (finished) {
             return;
         }

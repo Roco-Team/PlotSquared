@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.configuration.caption;
 
@@ -30,14 +23,12 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumSet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 class ClickStripTransformTest {
 
@@ -53,7 +44,7 @@ class ClickStripTransformTest {
                         )
                 );
         var transformedComponent = transform.transform(component);
-        assertNull(transformedComponent.clickEvent());
+        Assertions.assertNull(transformedComponent.clickEvent());
     }
 
     @Test
@@ -68,7 +59,7 @@ class ClickStripTransformTest {
         var component = Component.text("Hello")
                 .clickEvent(originalClickEvent);
         var transformedComponent = transform.transform(component);
-        assertEquals(originalClickEvent, transformedComponent.clickEvent());
+        Assertions.assertEquals(originalClickEvent, transformedComponent.clickEvent());
     }
 
     @Test
@@ -88,9 +79,9 @@ class ClickStripTransformTest {
                         inner.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://example.org"))
                 );
         var transformedComponent = transform.transform(component);
-        assertFalse(transformedComponent.children().isEmpty()); // child still exists
-        assertEquals(inner, transformedComponent.children().get(0)); // only the click event has changed
-        assertNull(transformedComponent.children().get(0).clickEvent());
+        Assertions.assertFalse(transformedComponent.children().isEmpty()); // child still exists
+        Assertions.assertEquals(inner, transformedComponent.children().get(0)); // only the click event has changed
+        Assertions.assertNull(transformedComponent.children().get(0).clickEvent());
     }
 
 }

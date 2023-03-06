@@ -1,18 +1,10 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base",
-    ":disableDependencyDashboard"
+    ":semanticCommitsDisabled"
   ],
-  "ignoreDeps": [
-    "guava",
-    "com.google.guava:guava",  
-    "gson",
-    "snakeyaml"
-  ],
-  "timezone": "Europe/Berlin",
-  "schedule": [
-    "on monday after 9am"
-  ],
-  "labels": ["Renovate"],
-  "commitMessagePrefix": "chore: "
+  "labels": ["dependencies"],
+  "rebaseWhen": "conflicted",
+  "schedule": ["on the first day of the week"]
 }

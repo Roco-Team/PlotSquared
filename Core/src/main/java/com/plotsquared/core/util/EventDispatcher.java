@@ -1,31 +1,26 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.util;
 
 import com.google.common.eventbus.EventBus;
+import com.intellectualsites.annotations.DoNotUse;
+import com.plotsquared.core.PlotSquared;
 import com.plotsquared.core.configuration.Settings;
 import com.plotsquared.core.configuration.caption.TranslatableCaption;
 import com.plotsquared.core.events.PlayerAutoPlotEvent;
@@ -50,7 +45,13 @@ import com.plotsquared.core.events.PlotFlagRemoveEvent;
 import com.plotsquared.core.events.PlotMergeEvent;
 import com.plotsquared.core.events.PlotRateEvent;
 import com.plotsquared.core.events.PlotUnlinkEvent;
+import com.plotsquared.core.events.RemoveRoadEntityEvent;
 import com.plotsquared.core.events.TeleportCause;
+import com.plotsquared.core.events.post.PostPlayerAutoPlotEvent;
+import com.plotsquared.core.events.post.PostPlotChangeOwnerEvent;
+import com.plotsquared.core.events.post.PostPlotDeleteEvent;
+import com.plotsquared.core.events.post.PostPlotMergeEvent;
+import com.plotsquared.core.events.post.PostPlotUnlinkEvent;
 import com.plotsquared.core.listener.PlayerBlockEventType;
 import com.plotsquared.core.location.Direction;
 import com.plotsquared.core.location.Location;
@@ -60,7 +61,6 @@ import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
 import com.plotsquared.core.plot.PlotId;
 import com.plotsquared.core.plot.Rating;
-import com.plotsquared.core.plot.expiration.ExpireManager;
 import com.plotsquared.core.plot.flag.PlotFlag;
 import com.plotsquared.core.plot.flag.implementations.DeviceInteractFlag;
 import com.plotsquared.core.plot.flag.implementations.MiscPlaceFlag;
@@ -72,19 +72,19 @@ import com.plotsquared.core.plot.flag.types.BlockTypeWrapper;
 import com.plotsquared.core.plot.world.SinglePlotArea;
 import com.plotsquared.core.util.task.TaskManager;
 import com.sk89q.worldedit.WorldEdit;
+import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.function.pattern.Pattern;
 import com.sk89q.worldedit.world.block.BlockType;
 import com.sk89q.worldedit.world.block.BlockTypes;
 import net.kyori.adventure.text.minimessage.Template;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.ApiStatus;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@ApiStatus.Internal
+@DoNotUse
 public class EventDispatcher {
 
     private final EventBus eventBus = new EventBus("PlotSquaredEvents");
@@ -135,6 +135,12 @@ public class EventDispatcher {
         return event;
     }
 
+    public PostPlayerAutoPlotEvent callPostAuto(PlotPlayer<?> player, Plot plot) {
+        PostPlayerAutoPlotEvent event = new PostPlayerAutoPlotEvent(player, plot);
+        callEvent(event);
+        return event;
+    }
+
     public PlayerAutoPlotsChosenEvent callAutoPlotsChosen(
             PlotPlayer<?> player, List<Plot> plots
     ) {
@@ -174,6 +180,12 @@ public class EventDispatcher {
         return event;
     }
 
+    public PostPlotDeleteEvent callPostDelete(Plot plot) {
+        PostPlotDeleteEvent event = new PostPlotDeleteEvent(plot);
+        callEvent(event);
+        return event;
+    }
+
     public PlotFlagAddEvent callFlagAdd(PlotFlag<?, ?> flag, Plot plot) {
         PlotFlagAddEvent event = new PlotFlagAddEvent(flag, plot);
         callEvent(event);
@@ -192,6 +204,12 @@ public class EventDispatcher {
         return event;
     }
 
+    public PostPlotMergeEvent callPostMerge(PlotPlayer<?> player, Plot plot) {
+        PostPlotMergeEvent event = new PostPlotMergeEvent(player, plot);
+        callEvent(event);
+        return event;
+    }
+
     public PlotAutoMergeEvent callAutoMerge(Plot plot, List<PlotId> plots) {
         PlotAutoMergeEvent event = new PlotAutoMergeEvent(plot.getWorldName(), plot, plots);
         callEvent(event);
@@ -203,6 +221,12 @@ public class EventDispatcher {
             boolean createSign, PlotUnlinkEvent.REASON reason
     ) {
         PlotUnlinkEvent event = new PlotUnlinkEvent(area, plot, createRoad, createSign, reason);
+        callEvent(event);
+        return event;
+    }
+
+    public PostPlotUnlinkEvent callPostUnlink(Plot plot, PlotUnlinkEvent.REASON reason) {
+        PostPlotUnlinkEvent event = new PostPlotUnlinkEvent(plot, reason);
         callEvent(event);
         return event;
     }
@@ -256,6 +280,12 @@ public class EventDispatcher {
         return event;
     }
 
+    public PostPlotChangeOwnerEvent callPostOwnerChange(PlotPlayer<?> player, Plot plot, @Nullable UUID oldOwner) {
+        PostPlotChangeOwnerEvent event = new PostPlotChangeOwnerEvent(player, plot, oldOwner);
+        callEvent(event);
+        return event;
+    }
+
     public PlotRateEvent callRating(PlotPlayer<?> player, Plot plot, Rating rating) {
         PlotRateEvent event = new PlotRateEvent(player, rating, plot);
         eventBus.post(event);
@@ -268,12 +298,18 @@ public class EventDispatcher {
         return event;
     }
 
+    public RemoveRoadEntityEvent callRemoveRoadEntity(Entity entity) {
+        RemoveRoadEntityEvent event = new RemoveRoadEntityEvent(entity);
+        eventBus.post(event);
+        return event;
+    }
+
     public void doJoinTask(final PlotPlayer<?> player) {
         if (player == null) {
             return; //possible future warning message to figure out where we are retrieving null
         }
-        if (ExpireManager.IMP != null) {
-            ExpireManager.IMP.handleJoin(player);
+        if (PlotSquared.platform().expireManager() != null) {
+            PlotSquared.platform().expireManager().handleJoin(player);
         }
         if (this.worldEdit != null) {
             if (player.getAttribute("worldedit")) {
@@ -304,6 +340,14 @@ public class EventDispatcher {
     ) {
         PlotArea area = location.getPlotArea();
         assert area != null;
+        if (!area.buildRangeContainsY(location.getY()) && !player.hasPermission(Permission.PERMISSION_ADMIN_BUILD_HEIGHT_LIMIT)) {
+            player.sendMessage(
+                    TranslatableCaption.of("height.height_limit"),
+                    Template.of("minHeight", String.valueOf(area.getMinBuildHeight())),
+                    Template.of("maxHeight", String.valueOf(area.getMaxBuildHeight()))
+            );
+            return false;
+        }
         Plot plot = area.getPlot(location);
         if (plot != null) {
             if (plot.isAdded(player.getUUID())) {
@@ -323,12 +367,12 @@ public class EventDispatcher {
                             return true;
                         }
                     }
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_ROAD.toString(), notifyPerms
                     );
                 }
                 if (!plot.hasOwner()) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_UNOWNED.toString(), notifyPerms
                     );
                 }
@@ -339,7 +383,7 @@ public class EventDispatcher {
                         return true;
                     }
                 }
-                if (Permissions.hasPermission(player, Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(), false)) {
+                if (player.hasPermission(Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(), false)) {
                     return true;
                 }
                 if (notifyPerms) {
@@ -358,12 +402,12 @@ public class EventDispatcher {
                             return true;
                         }
                     }
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_ROAD.toString(), false
                     );
                 }
                 if (!plot.hasOwner()) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_UNOWNED.toString(), false
                     );
                 }
@@ -377,19 +421,19 @@ public class EventDispatcher {
                         return true;
                     }
                 }
-                return Permissions
-                        .hasPermission(player, Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(),
-                                false
-                        );
+                return player.hasPermission(
+                        Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(),
+                        false
+                );
             }
             case SPAWN_MOB: {
                 if (plot == null) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_ROAD.toString(), notifyPerms
                     );
                 }
                 if (!plot.hasOwner()) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_UNOWNED.toString(), notifyPerms
                     );
                 }
@@ -403,10 +447,10 @@ public class EventDispatcher {
                         return true;
                     }
                 }
-                if (Permissions
-                        .hasPermission(player, Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(),
-                                false
-                        )) {
+                if (player.hasPermission(
+                        Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(),
+                        false
+                )) {
                     return true;
                 }
                 if (notifyPerms) {
@@ -420,12 +464,12 @@ public class EventDispatcher {
             }
             case PLACE_MISC: {
                 if (plot == null) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_ROAD.toString(), notifyPerms
                     );
                 }
                 if (!plot.hasOwner()) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_UNOWNED.toString(), notifyPerms
                     );
                 }
@@ -439,10 +483,10 @@ public class EventDispatcher {
                         return true;
                     }
                 }
-                if (Permissions
-                        .hasPermission(player, Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(),
-                                false
-                        )) {
+                if (player.hasPermission(
+                        Permission.PERMISSION_ADMIN_INTERACT_OTHER.toString(),
+                        false
+                )) {
                     return true;
                 }
                 if (notifyPerms) {
@@ -456,12 +500,12 @@ public class EventDispatcher {
             }
             case PLACE_VEHICLE:
                 if (plot == null) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_ROAD.toString(), notifyPerms
                     );
                 }
                 if (!plot.hasOwner()) {
-                    return Permissions.hasPermission(player,
+                    return player.hasPermission(
                             Permission.PERMISSION_ADMIN_INTERACT_UNOWNED.toString(), notifyPerms
                     );
                 }

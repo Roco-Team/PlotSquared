@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.bukkit.queue;
 
@@ -63,10 +56,27 @@ import java.util.function.Consumer;
 
 public class BukkitQueueCoordinator extends BasicQueueCoordinator {
 
-    private final SideEffectSet noSideEffectSet;
-    private final SideEffectSet lightingSideEffectSet;
-    private final SideEffectSet edgeSideEffectSet;
-    private final SideEffectSet edgeLightingSideEffectSet;
+    private static final SideEffectSet NO_SIDE_EFFECT_SET;
+    private static final SideEffectSet EDGE_SIDE_EFFECT_SET;
+    private static final SideEffectSet LIGHTING_SIDE_EFFECT_SET;
+    private static final SideEffectSet EDGE_LIGHTING_SIDE_EFFECT_SET;
+
+    static {
+        NO_SIDE_EFFECT_SET = SideEffectSet.none().with(SideEffect.LIGHTING, SideEffect.State.OFF).with(
+                SideEffect.NEIGHBORS,
+                SideEffect.State.OFF
+        );
+        EDGE_SIDE_EFFECT_SET = SideEffectSet.none().with(SideEffect.UPDATE, SideEffect.State.ON).with(
+                SideEffect.NEIGHBORS,
+                SideEffect.State.ON
+        );
+        LIGHTING_SIDE_EFFECT_SET = SideEffectSet.none().with(SideEffect.NEIGHBORS, SideEffect.State.OFF);
+        EDGE_LIGHTING_SIDE_EFFECT_SET = SideEffectSet.none().with(SideEffect.UPDATE, SideEffect.State.ON).with(
+                SideEffect.NEIGHBORS,
+                SideEffect.State.ON
+        );
+    }
+
     private org.bukkit.World bukkitWorld;
     @Inject
     private ChunkCoordinatorBuilderFactory chunkCoordinatorBuilderFactory;
@@ -77,19 +87,6 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
     @Inject
     public BukkitQueueCoordinator(@NonNull World world) {
         super(world);
-        noSideEffectSet = SideEffectSet.none().with(SideEffect.LIGHTING, SideEffect.State.OFF).with(
-                SideEffect.NEIGHBORS,
-                SideEffect.State.OFF
-        );
-        lightingSideEffectSet = SideEffectSet.none().with(SideEffect.NEIGHBORS, SideEffect.State.OFF);
-        edgeSideEffectSet = noSideEffectSet.with(SideEffect.UPDATE, SideEffect.State.ON).with(
-                SideEffect.NEIGHBORS,
-                SideEffect.State.ON
-        );
-        edgeLightingSideEffectSet = noSideEffectSet.with(SideEffect.UPDATE, SideEffect.State.ON).with(
-                SideEffect.NEIGHBORS,
-                SideEffect.State.ON
-        );
     }
 
     @Override
@@ -112,8 +109,8 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
     public boolean enqueue() {
         final Clipboard regenClipboard;
         if (isRegen()) {
-            BlockVector3 start = BlockVector3.at(getRegenStart()[0] << 4, 0, getRegenStart()[1] << 4);
-            BlockVector3 end = BlockVector3.at((getRegenEnd()[0] << 4) + 15, 255, (getRegenEnd()[1] << 4) + 15);
+            BlockVector3 start = BlockVector3.at(getRegenStart()[0] << 4, getMinY(), getRegenStart()[1] << 4);
+            BlockVector3 end = BlockVector3.at((getRegenEnd()[0] << 4) + 15, getMaxY(), (getRegenEnd()[1] << 4) + 15);
             Region region = new CuboidRegion(start, end);
             regenClipboard = new BlockArrayClipboard(region);
             regenClipboard.setOrigin(start);
@@ -135,7 +132,7 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
                 int sx = blockVector2.getX() << 4;
                 int sz = blockVector2.getZ() << 4;
                 if (isRegenChunk) {
-                    for (int layer = 0; layer < 16; layer++) {
+                    for (int layer = getMinLayer(); layer <= getMaxLayer(); layer++) {
                         for (int y = 0; y < 16; y++) {
                             for (int x = 0; x < 16; x++) {
                                 for (int z = 0; z < 16; z++) {
@@ -171,7 +168,7 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
                             int lx = ChunkUtil.getX(j);
                             int lz = ChunkUtil.getZ(j);
                             int x = sx + lx;
-                            int y = ChunkUtil.getY(layer, j);
+                            int y = ChunkUtil.getY(layer + localChunk.getMinSection(), j);
                             int z = sz + lz;
                             boolean edge = Settings.QUEUE.UPDATE_EDGES && isEdge(y >> 4, lx, y & 15, lz, blockVector2,
                                     localChunk
@@ -180,7 +177,7 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
                         }
                     }
                 }
-                for (int layer = 0; layer < localChunk.getBaseblocks().length; layer++) {
+                for (int layer = 0; layer < localChunk.getBiomes().length; layer++) {
                     BiomeType[] biomesLayer = localChunk.getBiomes()[layer];
                     if (biomesLayer == null) {
                         continue;
@@ -199,15 +196,15 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
                     }
                 }
                 if (localChunk.getTiles().size() > 0) {
-                    localChunk.getTiles().forEach(((blockVector3, tag) -> {
+                    localChunk.getTiles().forEach((blockVector3, tag) -> {
                         try {
                             BaseBlock block = getWorld().getBlock(blockVector3).toBaseBlock(tag);
-                            getWorld().setBlock(blockVector3, block, noSideEffectSet);
+                            getWorld().setBlock(blockVector3, block, getSideEffectSet(SideEffectState.NONE));
                         } catch (WorldEditException ignored) {
                             StateWrapper sw = new StateWrapper(tag);
                             sw.restoreTag(getWorld().getName(), blockVector3.getX(), blockVector3.getY(), blockVector3.getZ());
                         }
-                    }));
+                    });
                 }
                 if (localChunk.getEntities().size() > 0) {
                     localChunk.getEntities().forEach((location, entity) -> getWorld().createEntity(location, entity));
@@ -231,6 +228,7 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
                         .withConsumer(consumer)
                         .unloadAfter(isUnloadAfter())
                         .withProgressSubscribers(getProgressSubscribers())
+                        .forceSync(isForceSync())
                         .build();
         return super.enqueue();
     }
@@ -238,6 +236,7 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
     /**
      * Set a block to the world. First tries WNA but defaults to normal block setting methods if that fails
      */
+    @SuppressWarnings("unused")
     private void setWorldBlock(int x, int y, int z, @NonNull BaseBlock block, @NonNull BlockVector2 blockVector2, boolean edge) {
         try {
             BlockVector3 loc = BlockVector3.at(x, y, z);
@@ -258,17 +257,21 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
             }
             SideEffectSet sideEffectSet;
             if (lighting) {
-                sideEffectSet = edge ? edgeLightingSideEffectSet : lightingSideEffectSet;
+                sideEffectSet = getSideEffectSet(edge ? SideEffectState.EDGE_LIGHTING : SideEffectState.LIGHTING);
             } else {
-                sideEffectSet = edge ? edgeSideEffectSet : noSideEffectSet;
+                sideEffectSet = getSideEffectSet(edge ? SideEffectState.EDGE : SideEffectState.NONE);
             }
             getWorld().setBlock(loc, block, sideEffectSet);
         } catch (WorldEditException ignored) {
             // Fallback to not so nice method
             BlockData blockData = BukkitAdapter.adapt(block);
-            Chunk chunk = getBukkitWorld().getChunkAt(blockVector2.getX(), blockVector2.getZ());
-
-            Block existing = chunk.getBlock(x, y, z);
+            Block existing;
+            // Assume a chunk object has been given only when it should have been.
+            if (getChunkObject() instanceof Chunk chunkObject) {
+                existing = chunkObject.getBlock(x & 15, y, z & 15);
+            } else {
+                 existing = getBukkitWorld().getBlockAt(x, y, z);
+            }
             final BlockState existingBaseBlock = BukkitAdapter.adapt(existing.getBlockData());
             if (BukkitBlockUtil.get(existing).equals(existingBaseBlock) && existing.getBlockData().matches(blockData)) {
                 return;
@@ -284,7 +287,7 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
                 CompoundTag tag = block.getNbtData();
                 StateWrapper sw = new StateWrapper(tag);
 
-                sw.restoreTag(getWorld().getName(), existing.getX(), existing.getY(), existing.getZ());
+                sw.restoreTag(existing);
             }
         }
     }
@@ -297,47 +300,48 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
     }
 
     private boolean isEdge(int layer, int x, int y, int z, BlockVector2 blockVector2, LocalChunk localChunk) {
-        if (layer == 0 || layer == localChunk.getBaseblocks().length - 1) {
+        int layerIndex = (layer - localChunk.getMinSection());
+        if (layer == localChunk.getMinSection() || layerIndex == localChunk.getBaseblocks().length - 1) {
             return false;
         }
         if (x == 0) {
             LocalChunk localChunkX = getBlockChunks().get(blockVector2.withX(blockVector2.getX() - 1));
-            if (localChunkX == null || localChunkX.getBaseblocks()[layer] == null ||
-                    localChunkX.getBaseblocks()[layer][ChunkUtil.getJ(15, y, z)] != null) {
+            if (localChunkX == null || localChunkX.getBaseblocks()[layerIndex] == null ||
+                    localChunkX.getBaseblocks()[layerIndex][ChunkUtil.getJ(15, y, z)] != null) {
                 return true;
             }
         } else if (x == 15) {
             LocalChunk localChunkX = getBlockChunks().get(blockVector2.withX(blockVector2.getX() + 1));
-            if (localChunkX == null || localChunkX.getBaseblocks()[layer] == null ||
-                    localChunkX.getBaseblocks()[layer][ChunkUtil.getJ(0, y, z)] != null) {
+            if (localChunkX == null || localChunkX.getBaseblocks()[layerIndex] == null ||
+                    localChunkX.getBaseblocks()[layerIndex][ChunkUtil.getJ(0, y, z)] != null) {
                 return true;
             }
         }
         if (z == 0) {
             LocalChunk localChunkZ = getBlockChunks().get(blockVector2.withZ(blockVector2.getZ() - 1));
-            if (localChunkZ == null || localChunkZ.getBaseblocks()[layer] == null ||
-                    localChunkZ.getBaseblocks()[layer][ChunkUtil.getJ(x, y, 15)] != null) {
+            if (localChunkZ == null || localChunkZ.getBaseblocks()[layerIndex] == null ||
+                    localChunkZ.getBaseblocks()[layerIndex][ChunkUtil.getJ(x, y, 15)] != null) {
                 return true;
             }
         } else if (z == 15) {
             LocalChunk localChunkZ = getBlockChunks().get(blockVector2.withZ(blockVector2.getZ() + 1));
-            if (localChunkZ == null || localChunkZ.getBaseblocks()[layer] == null ||
-                    localChunkZ.getBaseblocks()[layer][ChunkUtil.getJ(x, y, 0)] != null) {
+            if (localChunkZ == null || localChunkZ.getBaseblocks()[layerIndex] == null ||
+                    localChunkZ.getBaseblocks()[layerIndex][ChunkUtil.getJ(x, y, 0)] != null) {
                 return true;
             }
         }
         if (y == 0) {
-            if (localChunk.getBaseblocks()[layer - 1] == null ||
-                    localChunk.getBaseblocks()[layer][ChunkUtil.getJ(x, 15, z)] != null) {
+            if (localChunk.getBaseblocks()[layerIndex - 1] == null ||
+                    localChunk.getBaseblocks()[layerIndex][ChunkUtil.getJ(x, 15, z)] != null) {
                 return true;
             }
         } else if (y == 15) {
-            if (localChunk.getBaseblocks()[layer + 1] == null ||
-                    localChunk.getBaseblocks()[layer][ChunkUtil.getJ(x, 0, z)] != null) {
+            if (localChunk.getBaseblocks()[layerIndex + 1] == null ||
+                    localChunk.getBaseblocks()[layerIndex][ChunkUtil.getJ(x, 0, z)] != null) {
                 return true;
             }
         }
-        BaseBlock[] baseBlocks = localChunk.getBaseblocks()[layer];
+        BaseBlock[] baseBlocks = localChunk.getBaseblocks()[layerIndex];
         if (x > 0 && baseBlocks[ChunkUtil.getJ(x - 1, y, z)] == null) {
             return true;
         }
@@ -374,6 +378,25 @@ public class BukkitQueueCoordinator extends BasicQueueCoordinator {
             return getBlockChunks().get(blockVector2.withZ(blockVector2.getZ() + 1)) == null;
         }
         return false;
+    }
+
+    private SideEffectSet getSideEffectSet(SideEffectState state) {
+        if (getSideEffectSet() != null) {
+            return getSideEffectSet();
+        }
+        return switch (state) {
+            case NONE -> NO_SIDE_EFFECT_SET;
+            case EDGE -> EDGE_SIDE_EFFECT_SET;
+            case LIGHTING -> LIGHTING_SIDE_EFFECT_SET;
+            case EDGE_LIGHTING -> EDGE_LIGHTING_SIDE_EFFECT_SET;
+        };
+    }
+
+    private enum SideEffectState {
+        NONE,
+        EDGE,
+        LIGHTING,
+        EDGE_LIGHTING
     }
 
 }

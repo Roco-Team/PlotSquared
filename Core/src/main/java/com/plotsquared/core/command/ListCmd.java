@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -32,17 +25,17 @@ import com.plotsquared.core.configuration.caption.Caption;
 import com.plotsquared.core.configuration.caption.CaptionHolder;
 import com.plotsquared.core.configuration.caption.Templates;
 import com.plotsquared.core.configuration.caption.TranslatableCaption;
+import com.plotsquared.core.database.DBFunc;
 import com.plotsquared.core.permissions.Permission;
 import com.plotsquared.core.player.PlotPlayer;
 import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.PlotArea;
-import com.plotsquared.core.plot.expiration.ExpireManager;
 import com.plotsquared.core.plot.flag.implementations.DoneFlag;
 import com.plotsquared.core.plot.flag.implementations.PriceFlag;
+import com.plotsquared.core.plot.flag.implementations.ServerPlotFlag;
 import com.plotsquared.core.plot.world.PlotAreaManager;
 import com.plotsquared.core.util.EconHandler;
 import com.plotsquared.core.util.MathMan;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.PlayerManager;
 import com.plotsquared.core.util.StringComparison;
 import com.plotsquared.core.util.StringMan;
@@ -88,40 +81,40 @@ public class ListCmd extends SubCommand {
 
     private String[] getArgumentList(PlotPlayer<?> player) {
         List<String> args = new ArrayList<>();
-        if (this.econHandler != null && Permissions.hasPermission(player, Permission.PERMISSION_LIST_FOR_SALE)) {
+        if (this.econHandler != null && player.hasPermission(Permission.PERMISSION_LIST_FOR_SALE)) {
             args.add("forsale");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_MINE)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_MINE)) {
             args.add("mine");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_SHARED)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_SHARED)) {
             args.add("shared");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_WORLD)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_WORLD)) {
             args.add("world");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_TOP)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_TOP)) {
             args.add("top");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_ALL)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_ALL)) {
             args.add("all");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_UNOWNED)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_UNOWNED)) {
             args.add("unowned");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_PLAYER)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_PLAYER)) {
             args.add("<player>");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_WORLD)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_WORLD)) {
             args.add("<world>");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_DONE)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_DONE)) {
             args.add("done");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_EXPIRED)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_EXPIRED)) {
             args.add("expired");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_FUZZY)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_FUZZY)) {
             args.add("fuzzy <search...>");
         }
         return args.toArray(new String[args.size()]);
@@ -193,7 +186,7 @@ public class ListCmd extends SubCommand {
 
         switch (arg) {
             case "mine" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_MINE)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_MINE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.mine")
@@ -203,12 +196,12 @@ public class ListCmd extends SubCommand {
                 sort[0] = false;
                 plotConsumer.accept(PlotQuery
                         .newQuery()
-                        .ownedBy(player)
+                        .ownersInclude(player)
                         .whereBasePlot()
                         .withSortingStrategy(SortingStrategy.SORT_BY_TEMP));
             }
             case "shared" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_SHARED)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_SHARED)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.shared")
@@ -221,14 +214,14 @@ public class ListCmd extends SubCommand {
                         .thatPasses(plot -> !plot.isOwnerAbs(player.getUUID())));
             }
             case "world" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_WORLD)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_WORLD)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.world")
                     );
                     return false;
                 }
-                if (!Permissions.hasPermission(player, "plots.list.world." + world)) {
+                if (!player.hasPermission("plots.list.world." + world)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.world." + world)
@@ -238,28 +231,28 @@ public class ListCmd extends SubCommand {
                 plotConsumer.accept(PlotQuery.newQuery().inWorld(world));
             }
             case "expired" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_EXPIRED)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_EXPIRED)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.expired")
                     );
                     return false;
                 }
-                if (ExpireManager.IMP == null) {
+                if (PlotSquared.platform().expireManager() == null) {
                     plotConsumer.accept(PlotQuery.newQuery().noPlots());
                 } else {
                     plotConsumer.accept(PlotQuery.newQuery().expiredPlots());
                 }
             }
             case "area" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_AREA)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_AREA)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.area")
                     );
                     return false;
                 }
-                if (!Permissions.hasPermission(player, "plots.list.world." + world)) {
+                if (!player.hasPermission("plots.list.world." + world)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.world." + world)
@@ -273,7 +266,7 @@ public class ListCmd extends SubCommand {
                 }
             }
             case "all" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_ALL)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_ALL)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.all")
@@ -283,7 +276,7 @@ public class ListCmd extends SubCommand {
                 plotConsumer.accept(PlotQuery.newQuery().allPlots());
             }
             case "done" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_DONE)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_DONE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.done")
@@ -298,7 +291,7 @@ public class ListCmd extends SubCommand {
                         .withSortingStrategy(SortingStrategy.SORT_BY_DONE));
             }
             case "top" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_TOP)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_TOP)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.top")
@@ -309,7 +302,7 @@ public class ListCmd extends SubCommand {
                 plotConsumer.accept(PlotQuery.newQuery().allPlots().withSortingStrategy(SortingStrategy.SORT_BY_RATING));
             }
             case "forsale" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_FOR_SALE)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_FOR_SALE)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.forsale")
@@ -322,7 +315,7 @@ public class ListCmd extends SubCommand {
                 plotConsumer.accept(PlotQuery.newQuery().allPlots().thatPasses(plot -> plot.getFlag(PriceFlag.class) > 0));
             }
             case "unowned" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_UNOWNED)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_UNOWNED)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.unowned")
@@ -332,7 +325,7 @@ public class ListCmd extends SubCommand {
                 plotConsumer.accept(PlotQuery.newQuery().allPlots().thatPasses(plot -> plot.getOwner() == null));
             }
             case "fuzzy" -> {
-                if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_FUZZY)) {
+                if (!player.hasPermission(Permission.PERMISSION_LIST_FUZZY)) {
                     player.sendMessage(
                             TranslatableCaption.of("permission.no_permission"),
                             Templates.of("node", "plots.list.fuzzy")
@@ -357,14 +350,14 @@ public class ListCmd extends SubCommand {
             }
             default -> {
                 if (this.plotAreaManager.hasPlotArea(args[0])) {
-                    if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_WORLD)) {
+                    if (!player.hasPermission(Permission.PERMISSION_LIST_WORLD)) {
                         player.sendMessage(
                                 TranslatableCaption.of("permission.no_permission"),
                                 Templates.of("node", "plots.list.world")
                         );
                         return false;
                     }
-                    if (!Permissions.hasPermission(player, "plots.list.world." + args[0])) {
+                    if (!player.hasPermission("plots.list.world." + args[0])) {
                         player.sendMessage(
                                 TranslatableCaption.of("permission.no_permission"),
                                 Templates.of("node", "plots.list.world." + args[0])
@@ -388,7 +381,7 @@ public class ListCmd extends SubCommand {
                     if (uuid == null) {
                         player.sendMessage(TranslatableCaption.of("errors.invalid_player"), Templates.of("value", args[0]));
                     } else {
-                        if (!Permissions.hasPermission(player, Permission.PERMISSION_LIST_PLAYER)) {
+                        if (!player.hasPermission(Permission.PERMISSION_LIST_PLAYER)) {
                             player.sendMessage(
                                     TranslatableCaption.of("permission.no_permission"),
                                     Templates.of("node", "plots.list.player")
@@ -397,7 +390,8 @@ public class ListCmd extends SubCommand {
                             sort[0] = false;
                             plotConsumer.accept(PlotQuery
                                     .newQuery()
-                                    .ownedBy(uuid)
+                                    .ownersInclude(uuid)
+                                    .whereBasePlot()
                                     .withSortingStrategy(SortingStrategy.SORT_BY_TEMP));
                         }
                     }
@@ -417,7 +411,7 @@ public class ListCmd extends SubCommand {
                 Caption color;
                 if (plot.getOwner() == null) {
                     color = TranslatableCaption.of("info.plot_list_no_owner");
-                } else if (plot.isOwner(player.getUUID())) {
+                } else if (plot.isOwner(player.getUUID()) || plot.getOwner().equals(DBFunc.EVERYONE)) {
                     color = TranslatableCaption.of("info.plot_list_owned_by");
                 } else if (plot.isAdded(player.getUUID())) {
                     color = TranslatableCaption.of("info.plot_list_added_to");
@@ -455,37 +449,60 @@ public class ListCmd extends SubCommand {
                 String prefix = "";
                 String online = TranslatableCaption.of("info.plot_list_player_online").getComponent(player);
                 String offline = TranslatableCaption.of("info.plot_list_player_offline").getComponent(player);
+                String unknown = TranslatableCaption.of("info.plot_list_player_unknown").getComponent(player);
+                String server = TranslatableCaption.of("info.plot_list_player_server").getComponent(player);
+                String everyone = TranslatableCaption.of("info.plot_list_player_everyone").getComponent(player);
                 TextComponent.Builder builder = Component.text();
-                try {
-                    final List<UUIDMapping> names = PlotSquared.get().getImpromptuUUIDPipeline().getNames(plot.getOwners())
-                            .get(Settings.UUID.BLOCKING_TIMEOUT, TimeUnit.MILLISECONDS);
-                    for (final UUIDMapping uuidMapping : names) {
-                        PlotPlayer<?> pp = PlotSquared.platform().playerManager().getPlayerIfExists(uuidMapping.getUuid());
-                        Template prefixTemplate = Template.of("prefix", prefix);
-                        Template playerTemplate = Template.of("player", uuidMapping.getUsername());
-                        if (pp != null) {
-                            builder.append(MINI_MESSAGE.parse(online, prefixTemplate, playerTemplate));
-                        } else {
-                            builder.append(MINI_MESSAGE.parse(offline, prefixTemplate, playerTemplate));
-                        }
-                        prefix = ", ";
-                    }
-                } catch (InterruptedException | ExecutionException e) {
-                    final StringBuilder playerBuilder = new StringBuilder();
-                    final Iterator<UUID> uuidIterator = plot.getOwners().iterator();
-                    while (uuidIterator.hasNext()) {
-                        final UUID uuid = uuidIterator.next();
-                        playerBuilder.append(uuid);
-                        if (uuidIterator.hasNext()) {
-                            playerBuilder.append(", ");
-                        }
-                    }
-                    player.sendMessage(
-                            TranslatableCaption.of("errors.invalid_player"),
-                            Templates.of("value", playerBuilder.toString())
+                if (plot.getFlag(ServerPlotFlag.class)) {
+                    Template serverTemplate = Template.of(
+                            "info.server",
+                            TranslatableCaption.of("info.server").getComponent(player)
                     );
-                } catch (TimeoutException e) {
-                    player.sendMessage(TranslatableCaption.of("players.fetching_players_timeout"));
+                    builder.append(MINI_MESSAGE.parse(server, serverTemplate));
+                } else {
+                    try {
+                        final List<UUIDMapping> names = PlotSquared.get().getImpromptuUUIDPipeline().getNames(plot.getOwners())
+                                .get(Settings.UUID.BLOCKING_TIMEOUT, TimeUnit.MILLISECONDS);
+                        for (final UUIDMapping uuidMapping : names) {
+                            PlotPlayer<?> pp = PlotSquared.platform().playerManager().getPlayerIfExists(uuidMapping.getUuid());
+                            Template prefixTemplate = Template.of("prefix", prefix);
+                            Template playerTemplate = Template.of("player", uuidMapping.getUsername());
+                            if (pp != null) {
+                                builder.append(MINI_MESSAGE.parse(online, prefixTemplate, playerTemplate));
+                            } else if (uuidMapping.getUsername().equalsIgnoreCase("unknown")) {
+                                Template unknownTemplate = Template.of(
+                                        "info.unknown",
+                                        TranslatableCaption.of("info.unknown").getComponent(player)
+                                );
+                                builder.append(MINI_MESSAGE.parse(unknown, unknownTemplate));
+                            } else if (uuidMapping.getUuid().equals(DBFunc.EVERYONE)) {
+                                Template everyoneTemplate = Template.of(
+                                        "info.everyone",
+                                        TranslatableCaption.of("info.everyone").getComponent(player)
+                                );
+                                builder.append(MINI_MESSAGE.parse(everyone, everyoneTemplate));
+                            } else {
+                                builder.append(MINI_MESSAGE.parse(offline, prefixTemplate, playerTemplate));
+                            }
+                            prefix = ", ";
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        final StringBuilder playerBuilder = new StringBuilder();
+                        final Iterator<UUID> uuidIterator = plot.getOwners().iterator();
+                        while (uuidIterator.hasNext()) {
+                            final UUID uuid = uuidIterator.next();
+                            playerBuilder.append(uuid);
+                            if (uuidIterator.hasNext()) {
+                                playerBuilder.append(", ");
+                            }
+                        }
+                        player.sendMessage(
+                                TranslatableCaption.of("errors.invalid_player"),
+                                Templates.of("value", playerBuilder.toString())
+                        );
+                    } catch (TimeoutException e) {
+                        player.sendMessage(TranslatableCaption.of("players.fetching_players_timeout"));
+                    }
                 }
                 Template players = Template.of("players", builder.asComponent());
                 caption.set(TranslatableCaption.of("info.plot_list_item"));
@@ -497,31 +514,31 @@ public class ListCmd extends SubCommand {
     @Override
     public Collection<Command> tab(PlotPlayer<?> player, String[] args, boolean space) {
         final List<String> completions = new LinkedList<>();
-        if (this.econHandler.isSupported() && Permissions.hasPermission(player, Permission.PERMISSION_LIST_FOR_SALE)) {
+        if (this.econHandler.isSupported() && player.hasPermission(Permission.PERMISSION_LIST_FOR_SALE)) {
             completions.add("forsale");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_MINE)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_MINE)) {
             completions.add("mine");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_SHARED)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_SHARED)) {
             completions.add("shared");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_WORLD)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_WORLD)) {
             completions.addAll(PlotSquared.platform().worldManager().getWorlds());
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_TOP)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_TOP)) {
             completions.add("top");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_ALL)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_ALL)) {
             completions.add("all");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_UNOWNED)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_UNOWNED)) {
             completions.add("unowned");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_DONE)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_DONE)) {
             completions.add("done");
         }
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_EXPIRED)) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_EXPIRED)) {
             completions.add("expired");
         }
 
@@ -531,7 +548,7 @@ public class ListCmd extends SubCommand {
                 .map(completion -> new Command(null, true, completion, "", RequiredType.NONE, CommandCategory.TELEPORT) {
                 }).collect(Collectors.toCollection(LinkedList::new));
 
-        if (Permissions.hasPermission(player, Permission.PERMISSION_LIST_PLAYER) && args[0].length() > 0) {
+        if (player.hasPermission(Permission.PERMISSION_LIST_PLAYER) && args[0].length() > 0) {
             commands.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
         }
 

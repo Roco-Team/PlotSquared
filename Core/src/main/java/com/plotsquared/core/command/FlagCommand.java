@@ -1,30 +1,24 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
+import com.google.inject.Inject;
 import com.plotsquared.core.PlotSquared;
 import com.plotsquared.core.configuration.Settings;
 import com.plotsquared.core.configuration.caption.CaptionUtility;
@@ -44,8 +38,8 @@ import com.plotsquared.core.plot.flag.InternalFlag;
 import com.plotsquared.core.plot.flag.PlotFlag;
 import com.plotsquared.core.plot.flag.types.IntegerFlag;
 import com.plotsquared.core.plot.flag.types.ListFlag;
+import com.plotsquared.core.util.EventDispatcher;
 import com.plotsquared.core.util.MathMan;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.StringComparison;
 import com.plotsquared.core.util.StringMan;
 import com.plotsquared.core.util.helpmenu.HelpMenu;
@@ -79,8 +73,12 @@ import java.util.stream.Stream;
 @SuppressWarnings("unused")
 public final class FlagCommand extends Command {
 
-    public FlagCommand() {
+    private final EventDispatcher eventDispatcher;
+
+    @Inject
+    public FlagCommand(final @NonNull EventDispatcher eventDispatcher) {
         super(MainCommand.getInstance(), true);
+        this.eventDispatcher = eventDispatcher;
     }
 
     private static boolean sendMessage(PlotPlayer<?> player) {
@@ -114,7 +112,7 @@ public final class FlagCommand extends Command {
                             TranslatableCaption.of("permission.no_permission"),
                             Template.of(
                                     "node",
-                                    perm
+                                    perm + "." + numeric
                             )
                     );
                 }
@@ -129,7 +127,7 @@ public final class FlagCommand extends Command {
                             key.toLowerCase(),
                             entry.toString().toLowerCase()
                     );
-                    final boolean result = Permissions.hasPermission(player, permission);
+                    final boolean result = player.hasPermission(permission);
                     if (!result) {
                         player.sendMessage(TranslatableCaption.of("permission.no_permission"), Template.of("node", permission));
                         return false;
@@ -151,9 +149,9 @@ public final class FlagCommand extends Command {
         boolean result;
         String basePerm = Permission.PERMISSION_SET_FLAG_KEY.format(key.toLowerCase());
         if (flag.isValuedPermission()) {
-            result = Permissions.hasKeyedPermission(player, basePerm, value);
+            result = player.hasKeyedPermission(basePerm, value);
         } else {
-            result = Permissions.hasPermission(player, basePerm);
+            result = player.hasPermission(basePerm);
             perm = basePerm;
         }
         if (!result) {
@@ -165,7 +163,7 @@ public final class FlagCommand extends Command {
     /**
      * Checks if the player is allowed to modify the flags at their current location
      *
-     * @return true if the player is allowed to modify the flags at their current location
+     * @return {@code true} if the player is allowed to modify the flags at their current location
      */
     private static boolean checkRequirements(final @NonNull PlotPlayer<?> player) {
         final Location location = player.getLocation();
@@ -178,8 +176,7 @@ public final class FlagCommand extends Command {
             player.sendMessage(TranslatableCaption.of("working.plot_not_claimed"));
             return false;
         }
-        if (!plot.isOwner(player.getUUID()) && !Permissions
-                .hasPermission(player, Permission.PERMISSION_SET_FLAG_OTHER)) {
+        if (!plot.isOwner(player.getUUID()) && !player.hasPermission(Permission.PERMISSION_SET_FLAG_OTHER)) {
             player.sendMessage(
                     TranslatableCaption.of("permission.no_permission"),
                     Template.of("node", String.valueOf(Permission.PERMISSION_SET_FLAG_OTHER))
@@ -335,7 +332,7 @@ public final class FlagCommand extends Command {
             return;
         }
         Plot plot = player.getLocation().getPlotAbs();
-        PlotFlagAddEvent event = new PlotFlagAddEvent(plotFlag, plot);
+        PlotFlagAddEvent event = eventDispatcher.callFlagAdd(plotFlag, plot);
         if (event.getEventResult() == Result.DENY) {
             player.sendMessage(
                     TranslatableCaption.of("events.event_denied"),
@@ -367,6 +364,7 @@ public final class FlagCommand extends Command {
         );
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @CommandDeclaration(command = "add",
             aliases = {"a", "add"},
             usage = "/plot flag add <flag> <value>",
@@ -393,7 +391,7 @@ public final class FlagCommand extends Command {
             return;
         }
         Plot plot = player.getLocation().getPlotAbs();
-        PlotFlagAddEvent event = new PlotFlagAddEvent(plotFlag, plot);
+        PlotFlagAddEvent event = eventDispatcher.callFlagAdd(plotFlag, plot);
         if (event.getEventResult() == Result.DENY) {
             player.sendMessage(
                     TranslatableCaption.of("events.event_denied"),
@@ -435,6 +433,7 @@ public final class FlagCommand extends Command {
         );
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @CommandDeclaration(command = "remove",
             aliases = {"r", "remove", "delete"},
             usage = "/plot flag remove <flag> [values]",
@@ -461,7 +460,8 @@ public final class FlagCommand extends Command {
             return;
         }
         final Plot plot = player.getLocation().getPlotAbs();
-        PlotFlagRemoveEvent event = new PlotFlagRemoveEvent(flag, plot);
+        final PlotFlag<?, ?> flagWithOldValue = plot.getFlagContainer().getFlag(flag.getClass());
+        PlotFlagRemoveEvent event = eventDispatcher.callFlagRemove(flag, plot);
         if (event.getEventResult() == Result.DENY) {
             player.sendMessage(
                     TranslatableCaption.of("events.event_denied"),
@@ -471,7 +471,7 @@ public final class FlagCommand extends Command {
         }
         boolean force = event.getEventResult() == Result.FORCE;
         flag = event.getFlag();
-        if (!force && !Permissions.hasPermission(player, Permission.PERMISSION_SET_FLAG_KEY.format(args[0].toLowerCase()))) {
+        if (!force && !player.hasPermission(Permission.PERMISSION_SET_FLAG_KEY.format(args[0].toLowerCase()))) {
             if (args.length != 2) {
                 player.sendMessage(
                         TranslatableCaption.of("permission.no_permission"),
@@ -505,7 +505,7 @@ public final class FlagCommand extends Command {
                     if (plot.removeFlag(flag)) {
                         player.sendMessage(TranslatableCaption.of("flag.flag_removed"), Template.of("flag", args[0]), Template.of(
                                 "value",
-                                String.valueOf(flag)
+                                String.valueOf(flagWithOldValue)
                         ));
                         return;
                     } else {
@@ -514,7 +514,7 @@ public final class FlagCommand extends Command {
                     }
                 } else {
                     PlotFlag<?, ?> plotFlag = parsedFlag.createFlagInstance(list);
-                    PlotFlagAddEvent addEvent = new PlotFlagAddEvent(plotFlag, plot);
+                    PlotFlagAddEvent addEvent = eventDispatcher.callFlagAdd(plotFlag, plot);
                     if (addEvent.getEventResult() == Result.DENY) {
                         player.sendMessage(
                                 TranslatableCaption.of("events.event_denied"),
@@ -543,7 +543,7 @@ public final class FlagCommand extends Command {
         }
         player.sendMessage(TranslatableCaption.of("flag.flag_removed"), Template.of("flag", args[0]), Template.of(
                 "value",
-                String.valueOf(flag)
+                String.valueOf(flagWithOldValue)
         ));
     }
 

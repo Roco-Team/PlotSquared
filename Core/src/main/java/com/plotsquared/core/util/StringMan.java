@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.util;
 
@@ -30,16 +23,26 @@ import com.plotsquared.core.configuration.caption.Caption;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class StringMan {
 
+    // Stolen from https://stackoverflow.com/a/366532/12620913 | Debug: https://regex101.com/r/DudJLb/1
+    private static final Pattern STRING_SPLIT_PATTERN = Pattern.compile("[^\\s\"]+|\"([^\"]*)\"");
+
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static String replaceFromMap(String string, Map<String, String> replacements) {
         StringBuilder sb = new StringBuilder(string);
         int size = string.length();
@@ -71,6 +74,10 @@ public class StringMan {
         return count;
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static String getString(Object obj) {
         if (obj == null) {
             return "null";
@@ -103,6 +110,10 @@ public class StringMan {
         }
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static String replaceFirst(char c, String s) {
         if (s == null) {
             return "";
@@ -129,6 +140,10 @@ public class StringMan {
         return s;
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static String replaceAll(String string, Object... pairs) {
         StringBuilder sb = new StringBuilder(string);
         for (int i = 0; i < pairs.length; i += 2) {
@@ -145,6 +160,10 @@ public class StringMan {
         return sb.toString();
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean isAlphanumeric(String str) {
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
@@ -166,6 +185,10 @@ public class StringMan {
         return true;
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean isAlpha(String str) {
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
@@ -186,14 +209,26 @@ public class StringMan {
         return join(array, delimiter);
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static String join(Collection<?> collection, char delimiter) {
         return join(collection.toArray(), delimiter + "");
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean isAsciiPrintable(char c) {
         return (c >= ' ') && (c < '');
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean isAsciiPrintable(String s) {
         for (char c : s.toCharArray()) {
             if (!isAsciiPrintable(c)) {
@@ -250,6 +285,10 @@ public class StringMan {
         return result.toString();
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static String join(int[] array, String delimiter) {
         Integer[] wrapped = new Integer[array.length];
         for (int i = 0; i < array.length; i++) {
@@ -258,6 +297,10 @@ public class StringMan {
         return join(wrapped, delimiter);
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean isEqualToAny(String a, String... args) {
         for (String arg : args) {
             if (StringMan.isEqual(a, arg)) {
@@ -285,19 +328,25 @@ public class StringMan {
         return a.equals(b);
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean isEqualIgnoreCase(String a, String b) {
-        return (a == b) || ((a != null) && (b != null) && (a.length() == b.length()) && a
+        return a.equals(b) || ((a != null) && (b != null) && (a.length() == b.length()) && a
                 .equalsIgnoreCase(b));
     }
 
     public static String repeat(String s, int n) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < n; i++) {
-            sb.append(s);
-        }
+        sb.append(String.valueOf(s).repeat(Math.max(0, n)));
         return sb.toString();
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public static boolean contains(String name, char c) {
         for (char current : name.toCharArray()) {
             if (c == current) {
@@ -307,6 +356,10 @@ public class StringMan {
         return false;
     }
 
+    /**
+     * @deprecated Unused internally. Scheduled for removal in next major release.
+     */
+    @Deprecated(forRemoval = true, since = "6.11.1")
     public <T> Collection<T> match(Collection<T> col, String startsWith) {
         if (col == null) {
             return null;
@@ -320,6 +373,48 @@ public class StringMan {
             }
         }
         return col;
+    }
+
+    /**
+     * @param message an input string
+     * @return a list of strings
+     * @since 6.4.0
+     *
+     *         <table border="1">
+     *         <caption>Converts multiple quoted and single strings into a list of strings</caption>
+     *         <thead>
+     *           <tr>
+     *             <th>Input</th>
+     *             <th>Output</th>
+     *           </tr>
+     *         </thead>
+     *         <tbody>
+     *           <tr>
+     *             <td>title "sub title"</td>
+     *             <td>["title", "sub title"]</td>
+     *           </tr>
+     *           <tr>
+     *             <td>"a title" subtitle</td>
+     *             <td>["a title", "subtitle"]</td>
+     *           </tr>
+     *           <tr>
+     *             <td>"title" "subtitle"</td>
+     *             <td>["title", "subtitle"]</td>
+     *           </tr>
+     *           <tr>
+     *             <td>"PlotSquared is going well" the authors "and many contributors"</td>
+     *             <td>["PlotSquared is going well", "the", "authors", "and many contributors"]</td>
+     *           </tr>
+     *         </tbody>
+     *         </table>
+     */
+    public static @NonNull List<String> splitMessage(@NonNull String message) {
+        var matcher = StringMan.STRING_SPLIT_PATTERN.matcher(message);
+        List<String> splitMessages = new ArrayList<>();
+        while (matcher.find()) {
+            splitMessages.add(matcher.group(matcher.groupCount() - 1).replaceAll("\"", ""));
+        }
+        return splitMessages;
     }
 
 }

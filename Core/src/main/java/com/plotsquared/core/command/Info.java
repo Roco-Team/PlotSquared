@@ -1,27 +1,20 @@
 /*
- *       _____  _       _    _____                                _
- *      |  __ \| |     | |  / ____|                              | |
- *      | |__) | | ___ | |_| (___   __ _ _   _  __ _ _ __ ___  __| |
- *      |  ___/| |/ _ \| __|\___ \ / _` | | | |/ _` | '__/ _ \/ _` |
- *      | |    | | (_) | |_ ____) | (_| | |_| | (_| | | |  __/ (_| |
- *      |_|    |_|\___/ \__|_____/ \__, |\__,_|\__,_|_|  \___|\__,_|
- *                                    | |
- *                                    |_|
- *            PlotSquared plot management system for Minecraft
- *                  Copyright (C) 2021 IntellectualSites
+ * PlotSquared, a land and world management plugin for Minecraft.
+ * Copyright (C) IntellectualSites <https://intellectualsites.com>
+ * Copyright (C) IntellectualSites team and contributors
  *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 package com.plotsquared.core.command;
 
@@ -34,7 +27,6 @@ import com.plotsquared.core.permissions.Permission;
 import com.plotsquared.core.player.PlotPlayer;
 import com.plotsquared.core.plot.Plot;
 import com.plotsquared.core.plot.flag.implementations.HideInfoFlag;
-import com.plotsquared.core.util.Permissions;
 import com.plotsquared.core.util.TabCompletions;
 import net.kyori.adventure.text.minimessage.Template;
 
@@ -57,7 +49,8 @@ public class Info extends SubCommand {
         if (args.length > 0) {
             arg = args[0];
             switch (arg) {
-                case "trusted", "alias", "inv", "biome", "denied", "flags", "id", "size", "members", "creationdate", "seen", "owner", "rating", "likes" -> plot = Plot
+                // TODO: (re?)implement /plot info inv. (it was never properly implemented)
+                case "trusted", "alias", "biome", "denied", "flags", "id", "size", "members", "creationdate", "seen", "owner", "rating", "likes" -> plot = Plot
                         .getPlotFromString(player, null, false);
                 default -> {
                     plot = Plot.getPlotFromString(player, arg, false);
@@ -150,7 +143,7 @@ public class Info extends SubCommand {
     @Override
     public Collection<Command> tab(PlotPlayer<?> player, String[] args, boolean space) {
         final List<String> completions = new LinkedList<>();
-        if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_INFO_FORCE)) {
+        if (player.hasPermission(Permission.PERMISSION_AREA_INFO_FORCE)) {
             completions.add("-f");
         }
 
@@ -160,7 +153,7 @@ public class Info extends SubCommand {
                 .map(completion -> new Command(null, true, completion, "", RequiredType.PLAYER, CommandCategory.INFO) {
                 }).collect(Collectors.toCollection(LinkedList::new));
 
-        if (Permissions.hasPermission(player, Permission.PERMISSION_AREA_INFO_FORCE) && args[0].length() > 0) {
+        if (player.hasPermission(Permission.PERMISSION_AREA_INFO_FORCE) && args[0].length() > 0) {
             commands.addAll(TabCompletions.completePlayers(player, args[0], Collections.emptyList()));
         }
 
